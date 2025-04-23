@@ -2,10 +2,12 @@ package com.rohit.ChatApplication.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.cglib.core.Local;
+
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.HashSet;
+
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -17,11 +19,9 @@ import java.util.UUID;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "user_id")
-    private UUID userid;
-
-    private String role = "USER";
+    @GeneratedValue
+    @Column(name = "user_id",columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID userId;
 
     @Column(name ="user_name", nullable = false, unique = true, length = 50)
     private String username;
@@ -35,6 +35,9 @@ public class User {
     @Column(name ="full_name", nullable = false,length = 50)
     private String FullName;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private Set<GroupMember> memberships = new HashSet<>();
+
     @Column(name = "last_seen")
     private LocalDateTime lastSeen;
 
@@ -44,31 +47,23 @@ public class User {
     @Column(name = "profile_photo_path", length = 250)
     private String profilePhotoPath;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
 
     public User(String username, String email, String password) {
         this.username = username;
         this.email = email;
         this.password = password;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
     }
 
-    @PrePersist
-    protected void OnCreate(){
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void OnUpdate(){
-        this.updatedAt = LocalDateTime.now();
-    }
+//    @PrePersist
+//    protected void OnCreate(){
+//        this.createdAt = LocalDateTime.now();
+//        this.updatedAt = LocalDateTime.now();
+//    }
+//
+//    @PreUpdate
+//    protected void OnUpdate(){
+//        this.updatedAt = LocalDateTime.now();
+//    }
 
 
 }

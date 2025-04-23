@@ -1,32 +1,20 @@
 package com.rohit.ChatApplication.config;
 
-import com.rohit.ChatApplication.service.UsersDetailsImpl;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import com.rohit.ChatApplication.service.UsersDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.authentication.password.CompromisedPasswordChecker;
-import org.springframework.security.authentication.password.CompromisedPasswordException;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.DefaultRedirectStrategy;
-import org.springframework.security.web.RedirectStrategy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AuthenticationFailureHandler;
-import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
-import org.springframework.security.web.authentication.password.HaveIBeenPwnedRestApiPasswordChecker;
-
-import java.io.IOException;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 
 @Configuration
@@ -34,8 +22,10 @@ import java.io.IOException;
 public class SecurityConfig {
 
     @Autowired
-    private UsersDetailsImpl usersDetails;
+    private UsersDetailsServiceImpl usersDetailsServiceImpl;
 
+    @Autowired
+    private JWTAuthFilter jwtAuthFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -43,28 +33,27 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/api/v1/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .httpBasic(Customizer.withDefaults());
+                .sessionManagement((session)->session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider(){
-        DaoAuthenticationProvider daoProvider = new DaoAuthenticationProvider();
-
-        daoProvider.setUserDetailsService(usersDetails);
-        daoProvider.setPasswordEncoder(passwordEncoder());
-        return daoProvider;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-
-
+    @Bean
+    public AuthenticationManager authenticationManager(UsersDetailsServiceImpl usersDetailsServiceImpl, PasswordEncoder passwordEncoder){
+        ChatAppUsernamePwdAuthenticationProvider authenticationProvider =  new ChatAppUsernamePwdAuthenticationProvider(usersDetailsServiceImpl,passwordEncoder );
+        ProviderManager providerManager = new ProviderManager(authenticationProvider);
+        providerManager.setEraseCredentialsAfterAuthentication(false);
+        return providerManager;
+    }
 
 }
