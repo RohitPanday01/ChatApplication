@@ -19,6 +19,9 @@ public class JwtService   {
     @Value("${jwt.secret}")
     private String secretKey;
 
+    private static final  long ACCESS_TOKEN_VALIDITY = 1000 * 60 * 60 * 10;
+    private static final long REFRESH_TOKEN_VALIDITY = 1000 * 60 * 60 * 24 * 7;
+
     public String extractUserName(String jwtToken) {
         return extractClaim(jwtToken, Claims::getSubject);
     }
@@ -29,7 +32,10 @@ public class JwtService   {
     }
 
     private Claims extractAllClaims(String jwtToken) {
-        return Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(jwtToken).getPayload();
+        return Jwts.parser().verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(jwtToken)
+                .getPayload();
     }
 
     private SecretKey getSigningKey() {
@@ -51,14 +57,18 @@ public class JwtService   {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return createToken(userDetails.getUsername());
+        return createToken(userDetails.getUsername() , ACCESS_TOKEN_VALIDITY);
     }
 
-    private String createToken(String userName) {
+    public String generateRefreshToken(UserDetails userDetails ){
+        return createToken(userDetails.getUsername() , REFRESH_TOKEN_VALIDITY);
+    }
+
+    private String createToken(String userName ,long validity) {
         return Jwts.builder()
                 .subject(userName)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
+                .expiration(new Date(System.currentTimeMillis() +validity))
                 .signWith(getSigningKey())
                 .compact();
     }

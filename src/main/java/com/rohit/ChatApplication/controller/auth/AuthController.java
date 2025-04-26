@@ -7,8 +7,13 @@ import com.rohit.ChatApplication.dao.UserRepo;
 import com.rohit.ChatApplication.entity.User;
 import com.rohit.ChatApplication.service.JwtService;
 import com.rohit.ChatApplication.service.UsersDetailsServiceImpl;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -20,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
+import java.util.Map;
 
 
 @RestController
@@ -75,7 +82,7 @@ public class AuthController {
     }
 
     @PostMapping("/Signin")
-    ResponseEntity<?> authenticateUser(@RequestBody LoginDTO loginDTO) {
+    ResponseEntity<?> authenticateUser(@RequestBody LoginDTO loginDTO, HttpServletResponse response) {
 
         try {
             authenticationManager.authenticate(
@@ -86,9 +93,34 @@ public class AuthController {
             );
 
             UserDetails userDetails = usersDetailsService.loadUserByUsername(loginDTO.getUserName());
-            String token = jwtService.generateToken(userDetails);
+         //   String token = jwtService.generateToken(userDetails);
 
-            return ResponseEntity.ok(new TokenDTO(token));
+            String accessToken = jwtService.generateToken(userDetails);
+            String refreshToken = jwtService.generateRefreshToken(userDetails);
+
+            ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
+                    .httpOnly(true)
+                    .secure(true)
+                    .path("/")
+                    .maxAge(Duration.ofMinutes(15))
+                    .sameSite("Strict")
+                    .build();
+
+            ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
+                    .httpOnly(true)
+                    .secure(true)
+                    .path("/")
+                    .maxAge(Duration.ofDays(7))
+                    .sameSite("Strict")
+                    .build();
+
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                    .body(Map.of(
+                            "message", "Login successful"
+                    ));
 
         } catch (BadCredentialsException ex) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
@@ -97,4 +129,53 @@ public class AuthController {
         }
 
     }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = extractRefreshTokenFromCookies(request);
+
+        if (refreshToken == null ) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Refresh token invalid or expired"));
+        }
+
+        String username = jwtService.extractUserName(refreshToken);
+        UserDetails userDetails = usersDetailsService.loadUserByUsername(username);
+
+        String newAccessToken = jwtService.generateToken(userDetails);
+        String newRefreshToken = jwtService.generateRefreshToken(userDetails);
+
+        ResponseCookie accessCookie = ResponseCookie.from("access_token", newAccessToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(Duration.ofHours(10))
+                .sameSite("Strict")
+                .build();
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", newRefreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(Duration.ofDays(7))
+                .sameSite("Strict")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(Map.of("message", "Tokens refreshed successfully"));
+    }
+
+    private String extractRefreshTokenFromCookies(HttpServletRequest request) {
+        if (request.getCookies() == null) {
+            return null;
+        }
+        for (Cookie cookie : request.getCookies()) {
+            if ("refresh_token".equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
+
 }

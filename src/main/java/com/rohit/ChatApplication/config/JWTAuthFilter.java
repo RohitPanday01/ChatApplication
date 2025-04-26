@@ -4,6 +4,7 @@ import com.rohit.ChatApplication.service.JwtService;
 import com.rohit.ChatApplication.service.UsersDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,16 +30,20 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        final String authorizationHeader = request.getHeader("Authorization");
-        final String jwtToken;
+//        final String authorizationHeader = request.getHeader("Authorization");
+        final String jwtToken = getJwtFromCookie(request);
         final String username;
 
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+        if(jwtToken == null ){
+            filterChain.doFilter(request , response);
+            return ;
         }
-
-        jwtToken = authorizationHeader.substring(7);
+//        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
+//
+//        jwtToken = authorizationHeader.substring(7);
         username = jwtService.extractUserName(jwtToken);
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -50,6 +55,18 @@ public class JWTAuthFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
 
+    private String getJwtFromCookie(HttpServletRequest request){
+        if(request.getCookies() == null){
+            return null;
+        }
+       Cookie[] cookies = request.getCookies();
+       for(Cookie cookie : cookies){
+           if("access_token".equals(cookie.getName())){
+               return  cookie.getValue();
+           }
+       }
+       return null;
     }
 }

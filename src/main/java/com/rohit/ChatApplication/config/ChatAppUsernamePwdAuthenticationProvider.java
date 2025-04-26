@@ -42,5 +42,4 @@ public class ChatAppUsernamePwdAuthenticationProvider implements AuthenticationP
         return UsernamePasswordAuthenticationToken.class.isAssignableFrom(authentication);
     }
 
-
 }
