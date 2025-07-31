@@ -25,11 +25,14 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private UsersDetailsServiceImpl usersDetailsServiceImpl;
+    private final UsersDetailsServiceImpl usersDetailsServiceImpl;
+    private final JWTAuthFilter jwtAuthFilter;
 
-    @Autowired
-    private JWTAuthFilter jwtAuthFilter;
+    public SecurityConfig(UsersDetailsServiceImpl usersDetailsServiceImpl,
+                          JWTAuthFilter jwtAuthFilter) {
+        this.usersDetailsServiceImpl = usersDetailsServiceImpl;
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -41,6 +44,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/ws/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement((session)->session

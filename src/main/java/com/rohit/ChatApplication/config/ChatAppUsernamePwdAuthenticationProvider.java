@@ -1,5 +1,6 @@
 package com.rohit.ChatApplication.config;
 
+import com.rohit.ChatApplication.data.UserDetail;
 import com.rohit.ChatApplication.service.UsersDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -28,11 +29,18 @@ public class ChatAppUsernamePwdAuthenticationProvider implements AuthenticationP
         String userName = authentication.getName();
         String pwd = authentication.getCredentials().toString();
 
-        UserDetails userDetails = usersDetailsServiceImpl.loadUserByUsername(userName);
 
-       if( passwordEncoder.matches(pwd , userDetails.getPassword())){
+        UserDetail userDetails = usersDetailsServiceImpl.loadUserByUsername(userName);
+
+        System.out.println("Username input: " + userName);
+        System.out.println("Password input (plain): " + pwd);
+        System.out.println("Password stored (hashed): " + userDetails.getPassword());
+        System.out.println("Password match: " + passwordEncoder.matches(pwd, userDetails.getPassword()));
+
+
+        if( passwordEncoder.matches(pwd , userDetails.getPassword())){
            return new UsernamePasswordAuthenticationToken(userName,pwd, userDetails.getAuthorities());
-        }else{
+       }else{
            throw new BadCredentialsException("Invalid Password");
        }
     }

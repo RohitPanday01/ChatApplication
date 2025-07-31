@@ -1,7 +1,6 @@
-package com.rohit.ChatApplication.DTO;
+package com.rohit.ChatApplication.data.auth;
 
 
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 

@@ -1,4 +1,4 @@
-package com.rohit.ChatApplication.DTO;
+package com.rohit.ChatApplication.data.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

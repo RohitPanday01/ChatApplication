@@ -2,11 +2,13 @@ package com.rohit.ChatApplication.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,6 +18,7 @@ import java.util.UUID;
 @Table(name ="Users")
 @AllArgsConstructor
 @NoArgsConstructor
+@BatchSize(size = 64)
 public class User {
 
     @Id
@@ -35,18 +38,32 @@ public class User {
     @Column(name ="full_name", nullable = false,length = 50)
     private String FullName;
 
+//    @OneToMany(mappedBy = "user1")
+//    private Set<PrivateChannel> initiatedChannels = new HashSet<>();
+//
+//    @OneToMany(mappedBy = "user2")
+//    private Set<PrivateChannel> receivedChannels = new HashSet<>();
+
+    @Transient
+    private Set<PrivateChannel> privateChannels = new HashSet<>();
+
+    @OneToMany(mappedBy = "user1")
+    private Set<PrivateChannel> blockedChannel = new HashSet<>();
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<GroupMember> memberships = new HashSet<>();
 
     @Column(name = "last_seen")
     private LocalDateTime lastSeen;
 
-    @Column(name = "is_online")
-    private boolean isOnline;
 
     @Column(name = "profile_photo_path", length = 250)
     private String profilePhotoPath;
 
+    @Transient
+    private Set<PrivateChannel> getAllPrivateChannels(){
+       return privateChannels;
+    }
 
     public User(String username, String email, String password) {
         this.username = username;
@@ -66,4 +83,15 @@ public class User {
 //    }
 
 
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof User user)) return false;
+        return Objects.equals(userId, user.userId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(userId);
+    }
 }
+

@@ -1,9 +1,8 @@
 package com.rohit.ChatApplication.controller.auth;
 
-import com.rohit.ChatApplication.DTO.LoginDTO;
-import com.rohit.ChatApplication.DTO.RegisterUserDTO;
-import com.rohit.ChatApplication.DTO.TokenDTO;
-import com.rohit.ChatApplication.dao.UserRepo;
+import com.rohit.ChatApplication.data.auth.LoginDTO;
+import com.rohit.ChatApplication.data.auth.RegisterUserDTO;
+import com.rohit.ChatApplication.repository.UserRepo;
 import com.rohit.ChatApplication.entity.User;
 import com.rohit.ChatApplication.service.JwtService;
 import com.rohit.ChatApplication.service.UsersDetailsServiceImpl;
@@ -18,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.authentication.AuthenticationManagerFactoryBean;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,23 +30,28 @@ import java.util.Map;
 
 
 @RestController
-@RequestMapping("api/v1/auth")
+@RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final AuthenticationManager authenticationManager;
+    private final UsersDetailsServiceImpl usersDetailsService;
+    private final JwtService jwtService;
+    private final PasswordEncoder passwordEncoder;
+    private final UserRepo userRepo;
 
-    @Autowired
-    private UsersDetailsServiceImpl usersDetailsService;
-
-    @Autowired
-    private JwtService jwtService;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private UserRepo userRepo;
+    public AuthController(
+            AuthenticationManager authenticationManager,
+            UsersDetailsServiceImpl usersDetailsService,
+            JwtService jwtService,
+            PasswordEncoder passwordEncoder,
+            UserRepo userRepo
+    ) {
+        this.authenticationManager = authenticationManager;
+        this.usersDetailsService = usersDetailsService;
+        this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
+        this.userRepo = userRepo;
+    }
 
 
 
@@ -116,8 +121,10 @@ public class AuthController {
 
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
-                    .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                    .headers(headers -> {
+                        headers.add(HttpHeaders.SET_COOKIE, accessCookie.toString());
+                        headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+                    })
                     .body(Map.of(
                             "message", "Login successful"
                     ));
@@ -161,8 +168,10 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
-                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .headers(headers -> {
+                    headers.add(HttpHeaders.SET_COOKIE, accessCookie.toString());
+                    headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+                })
                 .body(Map.of("message", "Tokens refreshed successfully"));
     }
 
