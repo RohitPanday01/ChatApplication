@@ -13,7 +13,7 @@ import java.util.Optional;
 @Component
 public class LastSeenWriter implements ItemWriter<UserLastSeen> {
 
-    private UserRepo userRepo;
+    private final UserRepo userRepo;
 
     public LastSeenWriter(UserRepo userRepo){
         this.userRepo = userRepo;

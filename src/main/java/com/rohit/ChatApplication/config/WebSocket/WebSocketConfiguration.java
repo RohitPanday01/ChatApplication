@@ -1,5 +1,6 @@
 package com.rohit.ChatApplication.config.WebSocket;
 
+import com.rohit.ChatApplication.controller.Websocket.PresenceWSHandler;
 import com.rohit.ChatApplication.interceptor.CsrfChannelInterceptor;
 import com.rohit.ChatApplication.interceptor.JwtCookieHandshakeInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,51 +20,25 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
 @EnableWebSocket
-@EnableWebSocketMessageBroker
-public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer {
+public class WebSocketConfiguration implements WebSocketConfigurer {
 
-    private TaskScheduler messageBrokerTaskScheduler;
+    private final JwtCookieHandshakeInterceptor jwtCookieHandshakeInterceptor ;
+    private final PresenceWSHandler presenceWSHandler;
 
-    private final JwtCookieHandshakeInterceptor jwtCookieHandshakeInterceptor;
+    public WebSocketConfiguration(JwtCookieHandshakeInterceptor jwtCookieHandshakeInterceptor,
+                                  PresenceWSHandler presenceWSHandler ){
+        this.jwtCookieHandshakeInterceptor = jwtCookieHandshakeInterceptor;
+        this.presenceWSHandler = presenceWSHandler;
 
-    public WebSocketConfiguration (JwtCookieHandshakeInterceptor jwtCookieHandshakeInterceptor){
-        this.jwtCookieHandshakeInterceptor  = jwtCookieHandshakeInterceptor;
     }
-
-    @Autowired
-    public void setMessageBrokerTaskScheduler(@Lazy TaskScheduler messageBrokerTaskScheduler) {
-        this.messageBrokerTaskScheduler = messageBrokerTaskScheduler;
-    }
-
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry config){
-       config.enableSimpleBroker("/topic" , "/queue")
-               .setHeartbeatValue(new long[]{10000 ,20000})
-               .setTaskScheduler(this.messageBrokerTaskScheduler);
-       config.setApplicationDestinationPrefixes("/app");
-       config.setUserDestinationPrefix("/user");
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+
+        registry
+                .addHandler(presenceWSHandler ,"/ws/channel/presence/subscribe")
+                .addInterceptors(jwtCookieHandshakeInterceptor)
+                .setAllowedOrigins("*");
     }
 
-    public void  registerStompEndpoints(StompEndpointRegistry registry){
-        registry.addEndpoint("/ws")
-                .setAllowedOrigins("*")
-                .addInterceptors(jwtCookieHandshakeInterceptor );
-    }
- 
-    @Bean
-    public TaskScheduler heartBeatScheduler(){
-        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(1);
-        scheduler.setThreadNamePrefix("wss-heartbeat-thread");
-        return scheduler;
-    }
-
-//    @Bean
-//    public ServletServerContainerFactoryBean createWebSocketContainer() {
-//        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
-//        container.setMaxTextMessageBufferSize(64 * 1024);
-//        container.setMaxSessionIdleTimeout(10 * 60 * 1000L);
-//        return container;
-//    }
 
 }

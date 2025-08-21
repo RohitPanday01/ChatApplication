@@ -32,18 +32,17 @@ public class PrivateMessageServiceImpl{
     private final UsersDetailsServiceImpl usersDetailsService;
     private final PrivateMessageRepository privateMessageRepository;
     private final PrivateChannelRepository privateChannelRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+
 
     public PrivateMessageServiceImpl(
             UsersDetailsServiceImpl usersDetailsService,
             PrivateChannelRepository privateChannelRepository,
-            PrivateMessageRepository privateMessageRepository,
-            SimpMessagingTemplate messagingTemplate) {
+            PrivateMessageRepository privateMessageRepository) {
 
         this.usersDetailsService = usersDetailsService;
         this.privateMessageRepository = privateMessageRepository;
         this.privateChannelRepository = privateChannelRepository;
-        this.messagingTemplate = messagingTemplate;
+
     }
 
     private PrivateChannel getChannelById(UUID channelId) throws ChannelDoesNotExist {
@@ -69,23 +68,7 @@ public class PrivateMessageServiceImpl{
 
     }
 
-    public void deliverMessage(PrivateMessageDto privateMessageDto) throws UserDoesNotExist {
 
-        String receiver = privateMessageDto.getTo().getId();
-        String sender = privateMessageDto.getFrom().getId();
-
-        this.messagingTemplate.convertAndSendToUser(
-                receiver,
-                "/queue/privateChannel/" + privateMessageDto.getChannel(),
-                privateMessageDto
-        );
-
-        this.messagingTemplate.convertAndSendToUser(
-                sender,
-                "/queue/privateChannel/" + privateMessageDto.getChannel(),
-                privateMessageDto
-        );
-    }
 
     public SliceList<PrivateMessageDto> getAllMessages(String userId,
                                                        PageRequest pageRequest)throws UserDoesNotExist{

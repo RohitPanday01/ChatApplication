@@ -26,21 +26,23 @@ public class UserPublicProfile {
         this.username = getUsername();
     }
 
-    public  UserPublicProfile(GroupMember member){
-        this.id = member.getUser().getUserId().toString();
-        this.username = member.getUser().getUsername();
-    }
+//    public  UserPublicProfile(GroupMember member){
+//        this.id = member.getUser().getUserId().toString();
+//        this.username = member.getUser().getUsername();
+//    }
 
 
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof UserPublicProfile that)) return false;
-        return Objects.equals(id, that.id);
+        if (this == o) return true; // same object
+        if (!(o instanceof UserPublicProfile)) return false;
+        UserPublicProfile that = (UserPublicProfile) o;
+        return Objects.equals(id, that.id); // compare by ID
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return Objects.hash(id); // hash only by ID
     }
 }

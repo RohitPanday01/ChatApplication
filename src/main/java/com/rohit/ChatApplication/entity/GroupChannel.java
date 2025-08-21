@@ -45,7 +45,6 @@ public class GroupChannel extends TimeStampBase {
 //    private Set<GroupMember> bannedUsers = new HashSet<>();
 
     @OneToMany(mappedBy = "groupChannel" , cascade =  CascadeType.ALL , orphanRemoval = true)
-
     private List<GroupMessage> messages = new ArrayList<>();
 
     @OneToOne(fetch =  FetchType.LAZY)

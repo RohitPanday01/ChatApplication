@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface PrivateChannelRepository extends JpaRepository<PrivateChannel , UUID> {
@@ -32,6 +33,17 @@ public interface PrivateChannelRepository extends JpaRepository<PrivateChannel ,
     WHERE pc.user1.id = :userId OR pc.user2.id = :userId
     """)
     List<PrivateChannel> findAllChannelForUser(@Param("userId") UUID userId);
+
+
+    @Query("""
+        SELECT CASE
+            WHEN p.user1.username = :username THEN p.user2.username
+            ELSE p.user1.username
+        END
+        FROM PrivateChannel p
+        WHERE p.user1.username = :username OR p.user2.username = :username
+    """)
+    Set<String> findUsersWhoCare(@Param("username") String username);
 
     @Query("""
     SELECT pc FROM PrivateChannel pc

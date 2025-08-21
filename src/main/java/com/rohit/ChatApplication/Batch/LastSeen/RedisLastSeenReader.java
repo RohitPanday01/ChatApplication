@@ -38,8 +38,8 @@ public class RedisLastSeenReader implements ItemReader<UserLastSeen> {
             String key = keysIterator.next();
             String username = key.split(":")[1];
              LocalDateTime lastSeen = (LocalDateTime) redisTemplate.opsForValue().get(key);
-            Boolean isOnline = (Boolean) redisTemplate.opsForValue().get("user:" + username + ":online");
-             return new UserLastSeen(username , isOnline != null && isOnline ,lastSeen);
+//            Boolean isOnline = (Boolean) redisTemplate.opsForValue().get("user:" + username + ":online");
+             return new UserLastSeen(username , false ,lastSeen);
         }
         return null;
     }

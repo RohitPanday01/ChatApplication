@@ -1,7 +1,9 @@
 package com.rohit.ChatApplication.data.channel.profile;
 
+import com.rohit.ChatApplication.data.GroupMemberProfile;
 import com.rohit.ChatApplication.data.UserPublicProfile;
 import com.rohit.ChatApplication.entity.GroupChannel;
+import com.rohit.ChatApplication.entity.GroupMember;
 import com.rohit.ChatApplication.util.TimeUtil;
 import lombok.Data;
 
@@ -14,19 +16,19 @@ public class GroupChannelProfile {
 
     private String id;
 
-
     private String name;
 
-    private List<UserPublicProfile> members;
+    private List<GroupMemberProfile> members;
 
     private String createAt;
+
     private String updateAt;
 
     public GroupChannelProfile(GroupChannel channel) {
         this.id = channel.getGroupId().toString();
         this.name = channel.getGroupName();
         this.members = channel.getActiveMembers().stream()
-                .map(UserPublicProfile::new)
+                .map(GroupMemberProfile::new)
                 .collect(Collectors.toList());
 
         this.createAt = TimeUtil.formatInstant(channel.getCreateAt());
@@ -42,6 +44,6 @@ public class GroupChannelProfile {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, members);
+        return Objects.hash(id);
     }
 }

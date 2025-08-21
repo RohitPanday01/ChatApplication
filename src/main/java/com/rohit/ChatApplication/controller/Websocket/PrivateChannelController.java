@@ -36,19 +36,17 @@ public class PrivateChannelController {
     private final RedisTemplate<String, Object> redisTemplate;
     private final PrivateChannelServiceImpl privateChannelService;
     private final PrivateMessageServiceImpl privateMessageService;
-    private final SimpMessagingTemplate messagingTemplate;
+
 
     @Autowired
     public PrivateChannelController(
             RedisTemplate<String, Object> redisTemplate,
             PrivateChannelServiceImpl privateChannelService,
-            PrivateMessageServiceImpl privateMessageService,
-            SimpMessagingTemplate messagingTemplate
+            PrivateMessageServiceImpl privateMessageService
     ) {
         this.redisTemplate = redisTemplate;
         this.privateChannelService = privateChannelService;
         this.privateMessageService = privateMessageService;
-        this.messagingTemplate = messagingTemplate;
     }
 
     @GetMapping(path = "{channelId}/profile")
@@ -94,31 +92,7 @@ public class PrivateChannelController {
         return ResponseEntity.ok(privateMessageDtoSliceList);
     }
 
-    @GetMapping(path = "{channelId}/status")
-    public Map<String, Object> getUserStatus(@PathVariable String channelId)
-            throws UserDoesNotExist, ChannelDoesNotExist, InvalidOperation {
-        String userId = AuthUtil.currentUserDetail().getId();
-        String userName = AuthUtil.currentUserDetail().getUsername();
-        UserPublicProfile loggedInUser = new UserPublicProfile(userId,userName);
 
-
-        PrivateChannelProfile privateChannelProfile = privateChannelService.getChannelProfile(channelId , userId);
-        UserPublicProfile otherPerson = privateChannelProfile.getMembers().stream()
-                .filter(userPublicProfile -> !userPublicProfile.equals(loggedInUser))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Other user not found in channel"));
-
-       Boolean online =  (Boolean) redisTemplate.opsForValue().get("user:"+ otherPerson.getUsername() + ":online");
-       String lastSeen = (String) redisTemplate.opsForValue().get("user:" + otherPerson.getUsername() + ":lastSeen");
-
-       Map<String, Object > response = new HashMap<>();
-        response.put("username", otherPerson.getUsername());
-        response.put("online", online != null ? online : false);
-        response.put("lastSeen", lastSeen);
-
-        return response;
-
-    }
 
     @PostMapping("/blockage/{channelId}" )
     public ResponseEntity<Object> setBlockage(@PathVariable String channelId)
@@ -134,45 +108,7 @@ public class PrivateChannelController {
         }
     }
 
-    @MessageMapping("private/publishMessage")
-    public void handlePrivateMessage(PublishMessageRequest request)
-            throws UserDoesNotExist, ChannelDoesNotExist, InvalidOperation {
 
-        String senderId = AuthUtil.currentUserDetail().getId();
-
-        if (!(request.getFrom().getId()).equals(senderId)) {
-            throw new InvalidOperation("Sender of this message is not same as LoggedIn User");
-        }
-
-        String channelId = request.getChannelId();
-
-        if(channelId == null || channelId.isBlank()){
-            PrivateChannelProfile privateChannelProfile =
-                    privateChannelService.createChannelBetween(senderId, request.getTo().getId());
-
-            channelId = privateChannelProfile.getId();
-        }
-
-        PrivateMessageDto privateMessageDto = privateMessageService.createMessage(
-                senderId,
-                request.getChannelId(),
-                request.getMessageContent(),
-                request.getMessageType()
-        );
-        privateMessageService.deliverMessage(privateMessageDto);
-    }
-
-    @MessageMapping("/typing")
-    public void handleTyping(TypingEvent typingEvent ){
-       String username =  AuthUtil.currentUserDetail().getUsername();
-       typingEvent.setSenderUsername(username);
-
-       String channelId = typingEvent.getChannelId();
-
-       messagingTemplate.convertAndSend("/topic/private-channel/"+ channelId +"/typing" ,
-               typingEvent);
-
-    }
 
     
 
