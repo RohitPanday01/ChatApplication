@@ -41,7 +41,6 @@ public class PrivateMessage extends  TimeStampBase{
 
     private Instant sentAt;
 
-
     private Instant seenAt;
 
     private Instant deliveredAt;

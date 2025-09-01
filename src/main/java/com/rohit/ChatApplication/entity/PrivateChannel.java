@@ -30,7 +30,7 @@ public class PrivateChannel extends TimeStampBase{
     @JoinColumn(name = "user2_id")
     private User user2;
 
-    @OneToMany( mappedBy = "privateChannel", cascade = CascadeType.ALL )
+    @OneToMany( mappedBy = "privateChannel" )
     private List<PrivateMessage> messages;
 
     @OneToOne
@@ -97,7 +97,7 @@ public class PrivateChannel extends TimeStampBase{
         lastMessage = message;
     }
 
-    public void addMessage(User from ,MessageType messageType, String content ) throws InvalidOperation{
+    public PrivateMessage addMessage(User from ,MessageType messageType, String content ) throws InvalidOperation{
         if(user1.getUserId() != from.getUserId() || user2.getUserId() != from.getUserId()){
             throw new InvalidOperation("sender can't send message in this channel");
         }
@@ -106,6 +106,8 @@ public class PrivateChannel extends TimeStampBase{
         
         messages.add(privateMessage);
         lastMessage = privateMessage;
+
+        return privateMessage;
     }
 
     @Override
