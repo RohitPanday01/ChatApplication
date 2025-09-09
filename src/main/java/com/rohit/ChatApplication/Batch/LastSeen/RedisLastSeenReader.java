@@ -18,7 +18,7 @@ import java.util.Set;
 @Component
 public class RedisLastSeenReader implements ItemReader<UserLastSeen> {
 
-    private RedisTemplate<String , Object> redisTemplate;
+    private final RedisTemplate<String , Object> redisTemplate;
     private Iterator<String > keysIterator;
 
     public RedisLastSeenReader(RedisTemplate<String, Object> redisTemplate) {
@@ -30,7 +30,7 @@ public class RedisLastSeenReader implements ItemReader<UserLastSeen> {
         Set<String> keys = redisTemplate.keys("user:*:lastSeen");
         keysIterator = keys.iterator();
     }
-
+ 
     @Override
     public UserLastSeen read() throws Exception,
             UnexpectedInputException, ParseException, NonTransientResourceException {

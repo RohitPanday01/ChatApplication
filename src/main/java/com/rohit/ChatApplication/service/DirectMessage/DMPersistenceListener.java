@@ -1,10 +1,8 @@
 package com.rohit.ChatApplication.service.DirectMessage;
 
+import com.rohit.ChatApplication.Batch.Message.PrivateMessage.PrivateMessageBatcher;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
 import com.rohit.ChatApplication.entity.PrivateMessage;
-import com.rohit.ChatApplication.exception.ChannelDoesNotExist;
-import com.rohit.ChatApplication.exception.InvalidOperation;
-import com.rohit.ChatApplication.exception.UserDoesNotExist;
 import com.rohit.ChatApplication.repository.message.PrivateMessageRepository;
 import com.rohit.ChatApplication.service.message.PrivateMessageServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +13,10 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -22,25 +24,28 @@ import java.time.Instant;
 public class DMPersistenceListener {
     private final PrivateMessageRepository privateMessageRepository;
     private final PrivateMessageServiceImpl privateMessageService;
+    private final PrivateMessageBatcher batcher;
 
     @KafkaListener(
             topics = "${chat.topics.dm-persist}",
             groupId = "dm-persistence-svc",
             containerFactory = "persistContainerFactory"
     )
-    public  void onMessage(@Payload PrivateMessageDto dm , Acknowledgment ack) {
+    public  void onMessage(List<PrivateMessageDto> messages , Acknowledgment ack) {
 
         try{
-//            privateMessageService.createMessage(dm.getFrom().getId(),
-//                    dm.getChannel().toString() ,
-//                    dm.getContent(),
-//                    dm.getMessageType());
 
+            List<PrivateMessage> entities  = messages.stream()
+                    .map(privateMessageService::toEntity)
+                    .flatMap(Optional::stream)
+                    .toList();
+
+            batcher.addMessages(entities);
 
             ack.acknowledge();
 
         }catch(Exception exception){
-            log.error("not able to create and save message");
+            log.error("Failed to buffer messages, Kafka will retry", exception);
         }
     }
 

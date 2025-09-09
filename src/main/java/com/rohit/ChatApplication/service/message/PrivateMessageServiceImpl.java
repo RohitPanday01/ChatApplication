@@ -22,6 +22,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -55,6 +56,33 @@ public class PrivateMessageServiceImpl{
     }
 
 
+    public Optional<PrivateMessage> toEntity(PrivateMessageDto messageDto){
+
+        try{
+            PrivateChannel channel = getChannelById(messageDto.getChannel());
+            User from = usersDetailsService.getUserById(messageDto.getFrom().getId());
+            User to = channel.anotherMember(from);
+
+            PrivateMessage message = new PrivateMessage(
+                    channel,
+                    from,
+                    to,
+                    messageDto.getMessageType(),
+                    messageDto.getContent()
+            );
+
+            return Optional.of(message);
+
+        } catch (ChannelDoesNotExist e) {
+            System.err.println("Channel not found: " + e.getMessage());
+            return Optional.empty();
+        } catch (UserDoesNotExist e) {
+            System.err.println("User not found: " + e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+
 
     public PrivateMessageDto createMessage(String fromUserId ,
                                            String channelId,
@@ -69,7 +97,7 @@ public class PrivateMessageServiceImpl{
             PrivateMessage privateMessage = privateChannel.addMessage(user,messageType, Content);
 
             privateChannelRepository.saveAndFlush(privateChannel);
-            return new PrivateMessageDto(privateChannel.getLastMessage());
+            return new PrivateMessageDto(privateMessage);
 
         } catch (ChannelDoesNotExist e) {
             System.err.println("Channel not found: " + e.getMessage());

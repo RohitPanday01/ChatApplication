@@ -38,8 +38,12 @@ public class RegisterUserSession implements RegisterUserSessionManager {
     }
 
     @Override
-    public void unregisterUserSessionInLocalNodeMap(String username ,WebSocketSession session , String userId) throws UserDoesNotExist {
-        userSessions.remove(username ,  session );
+    public void unregisterUserSessionInLocalNodeMap(String username ,WebSocketSession session ) {
+        try{
+            userSessions.remove(username ,  session );
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
 
 
     }

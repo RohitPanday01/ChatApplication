@@ -12,6 +12,8 @@ import com.rohit.ChatApplication.entity.User;
 import com.rohit.ChatApplication.exception.ChannelDoesNotExist;
 import com.rohit.ChatApplication.exception.InvalidOperation;
 import com.rohit.ChatApplication.exception.UserDoesNotExist;
+import com.rohit.ChatApplication.service.DirectMessage.DMDeliveryListener;
+import com.rohit.ChatApplication.service.DirectMessage.DirectMessageProducer;
 import com.rohit.ChatApplication.service.channel.PrivateChannelServiceImpl;
 import com.rohit.ChatApplication.service.message.PrivateMessageServiceImpl;
 import com.rohit.ChatApplication.util.AuthUtil;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/v1/channel/private")
@@ -36,6 +39,8 @@ public class PrivateChannelController {
     private final RedisTemplate<String, Object> redisTemplate;
     private final PrivateChannelServiceImpl privateChannelService;
     private final PrivateMessageServiceImpl privateMessageService;
+
+    private DirectMessageProducer directMessageProducer;
 
 
     @Autowired
@@ -109,7 +114,42 @@ public class PrivateChannelController {
     }
 
 
+    @PostMapping("private/publishMessage")
+    public CompletableFuture<ResponseEntity<String>> handlePrivateMessage(@RequestBody  PublishMessageRequest request)
+            throws UserDoesNotExist, ChannelDoesNotExist, InvalidOperation {
 
-    
+        String senderId = AuthUtil.currentUserDetail().getId();
+
+        if (!(request.getFrom().getId()).equals(senderId)) {
+            throw new InvalidOperation("Sender of this message is not same as LoggedIn User");
+        }
+
+        String channelId = request.getChannelId();
+
+        if(channelId == null || channelId.isBlank()){
+            PrivateChannelProfile privateChannelProfile =
+                    privateChannelService.createChannelBetween(senderId, request.getTo().getId());
+
+            channelId = privateChannelProfile.getId();
+        }
+
+        PrivateMessageDto privateMessageDto = privateMessageService.createMessage(
+                senderId,
+                request.getChannelId(),
+                request.getMessageContent(),
+                request.getMessageType()
+        );
+
+       return  directMessageProducer.sendDirectMessage(privateMessageDto)
+                .thenApply(v -> ResponseEntity.ok("Message Sent"))
+                .exceptionally(ex ->
+                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body("Failed to enqueue message: " + ex.getMessage())
+                );
+
+//        messageProducer.sendDirectMessage(dm); // fire & forget
+//        return ResponseEntity.accepted().body("Message sending...");
+
+    }
 
 }

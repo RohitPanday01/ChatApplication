@@ -9,6 +9,7 @@ import com.rohit.ChatApplication.data.TypingEvent;
 import com.rohit.ChatApplication.data.UserDetail;
 import com.rohit.ChatApplication.data.channel.profile.GroupChannelProfile;
 import com.rohit.ChatApplication.data.channel.profile.PrivateChannelProfile;
+import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.service.RegisterUserSession;
 import com.rohit.ChatApplication.service.SessionSubscriptionManager;
 import com.rohit.ChatApplication.service.Typing.TypingEventPublisher;
@@ -30,6 +31,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 
+import java.net.InetAddress;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -60,7 +63,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
     private Set<GroupChannelProfile>groupChannelProfiles ;
 
     private  final SessionSubscriptionManager subscriptionManager;
-
+    private final NodeIdentity nodeIdentity;
 
 
 
@@ -69,7 +72,8 @@ public class PresenceWSHandler extends TextWebSocketHandler {
                              TypingEventPublisher typingEventPublisher ,
                              GroupChannelServiceImpl groupChannelService,
                              RegisterUserSession registerUserSession,
-                             SessionSubscriptionManager subscriptionManager){
+                             SessionSubscriptionManager subscriptionManager,
+                             NodeIdentity nodeIdentity){
         this.redisTemplate = redisTemplate;
         this.presencePublisher = presencePublisher;
         this.mapper = mapper;
@@ -77,6 +81,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
         this.groupChannelService = groupChannelService;
         this.registerUserSession = registerUserSession;
         this.subscriptionManager = subscriptionManager;
+        this.nodeIdentity = nodeIdentity;
 
     }
 
@@ -93,6 +98,11 @@ public class PresenceWSHandler extends TextWebSocketHandler {
         String userId = userDetail.getId();
         session.getAttributes().put("userid", userId);
        session.getAttributes().put("username", username);
+
+       String thisServerNodeId = nodeIdentity.getNodeId();
+
+       redisTemplate.opsForValue().set("node-Id"+ username , thisServerNodeId, Duration.ofMinutes(20));
+
 
        registerUserSession.registerUserSessionInLocalNodeMap(username , session, userId);
        subscriptionManager.subscribeUserChannels(userId);
@@ -147,9 +157,13 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
             WebSocketSession storedSession = registerUserSession.getUserSessionInLocalNodeMap(username);
             if (storedSession != null && storedSession.getId().equals(sessionId)) {
-                registerUserSession.unregisterUserSessionInLocalNodeMap(username , session , userId);
+                registerUserSession.unregisterUserSessionInLocalNodeMap(username , session );
                 subscriptionManager.unsubscribeUserChannels(userId);
             }
+
+
+            redisTemplate.delete("node-Id"+ username );
+
 
             for(GroupChannelProfile groupChannelProfile : groupChannelProfiles ){
 
@@ -176,7 +190,9 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
 
         presencePublisher.publish(username , "offline");
+
         redisTemplate.opsForZSet().remove("online_users_lastPing", username);
+
 
     }
 
