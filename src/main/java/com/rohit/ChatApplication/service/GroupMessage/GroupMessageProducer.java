@@ -13,8 +13,8 @@ import java.util.concurrent.CompletionException;
 @Slf4j
 public class GroupMessageProducer {
 
-    private String groupMessageDeliveryTopic;
-    private KafkaTemplate<String ,Object> kafkaTemplate;
+    private final String groupMessageDeliveryTopic;
+    private final KafkaTemplate<String ,Object> kafkaTemplate;
 
     public GroupMessageProducer(@Value("${chat.topics.group-delivery}")String groupMessageDeliveryTopic ,
                                 KafkaTemplate<String, Object> kafkaTemplate){

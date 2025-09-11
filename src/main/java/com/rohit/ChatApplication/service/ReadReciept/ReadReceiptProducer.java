@@ -3,6 +3,7 @@ package com.rohit.ChatApplication.service.ReadReciept;
 
 import com.rohit.ChatApplication.data.ReadReceipt;
 import com.rohit.ChatApplication.data.ReceiptType;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -16,11 +17,12 @@ import java.util.concurrent.CompletionException;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class ReadReceiptProducer {
 
     private KafkaTemplate<String , ReadReceipt> kafkaTemplate;
 
-    @Value("${chat.topics.readReceipt}")
+    @Value("${chat.topics.read-receipt}")
     private String readReceiptTopic;
 
 

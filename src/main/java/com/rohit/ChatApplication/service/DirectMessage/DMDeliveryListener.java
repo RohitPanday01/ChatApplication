@@ -62,7 +62,7 @@ public class DMDeliveryListener {
             groupId = "private-message-group",
             containerFactory = "deliveryContainerFactory"
     )
-    public void onMessage(@Payload PrivateMessageDto messageDto, @Header(KafkaHeaders.RECEIVED_KEY) String chatId,
+    public void onMessage(@Payload PrivateMessageDto messageDto,
                           Acknowledgment ack) {
         String receiverName  = messageDto.getTo().getUsername();
         String receiverId = messageDto.getTo().getId();
@@ -108,7 +108,7 @@ public class DMDeliveryListener {
 
                 }else {
                     // user is Online on But Other Node
-                    kafkaTemplate.send("inter-node-delivery", receiverName, messageDto)
+                    kafkaTemplate.send("inter-node-dm-delivery", receiverName, messageDto)
                             .whenComplete((result, ex) -> {
                         if (ex == null) {
                             ack.acknowledge();

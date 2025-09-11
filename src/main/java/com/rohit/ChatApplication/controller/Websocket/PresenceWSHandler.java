@@ -3,27 +3,27 @@ package com.rohit.ChatApplication.controller.Websocket;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.rohit.ChatApplication.data.GroupMemberProfile;
-import com.rohit.ChatApplication.data.TypingEvent;
+
 import com.rohit.ChatApplication.data.UserDetail;
 import com.rohit.ChatApplication.data.channel.profile.GroupChannelProfile;
-import com.rohit.ChatApplication.data.channel.profile.PrivateChannelProfile;
+
 import com.rohit.ChatApplication.data.message.NodeIdentity;
+
 import com.rohit.ChatApplication.service.RegisterUserSession;
 import com.rohit.ChatApplication.service.SessionSubscriptionManager;
 import com.rohit.ChatApplication.service.Typing.TypingEventPublisher;
-import com.rohit.ChatApplication.service.Typing.TypingSubscriber;
+
 import com.rohit.ChatApplication.service.UserPresence.PresencePublisher;
 import com.rohit.ChatApplication.service.channel.GroupChannelServiceImpl;
-import com.rohit.ChatApplication.service.channel.PrivateChannelServiceImpl;
+
 import com.rohit.ChatApplication.util.AuthUtil;
-import lombok.Getter;
+
 import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.graphql.GraphQlProperties;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -31,17 +31,18 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 
-import java.net.InetAddress;
+
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.List;
+
 import java.util.Set;
 import java.util.concurrent.*;
 
 
 @Component
-@Slf4j
+
 public class PresenceWSHandler extends TextWebSocketHandler {
+
+    private final Logger log = LoggerFactory.getLogger(PresenceWSHandler.class);
 
     private final RedisTemplate<String , Object> redisTemplate;
     private final PresencePublisher presencePublisher;
@@ -101,7 +102,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
        String thisServerNodeId = nodeIdentity.getNodeId();
 
-       redisTemplate.opsForValue().set("node-Id"+ username , thisServerNodeId, Duration.ofMinutes(20));
+       redisTemplate.opsForValue().set("nodeId:"+ username , thisServerNodeId, Duration.ofMinutes(20));
 
 
        registerUserSession.registerUserSessionInLocalNodeMap(username , session, userId);
@@ -142,12 +143,12 @@ public class PresenceWSHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void handleTransportError(@NonNull WebSocketSession session, Throwable exception) throws Exception {
-        exception.printStackTrace();
+    public void handleTransportError(@NonNull WebSocketSession session, Throwable exception) {
+        log.error("error in handleTransport");
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, @NonNull CloseStatus status) throws Exception {
+    public void afterConnectionClosed(WebSocketSession session, @NonNull CloseStatus status) {
         String username = (String) session.getAttributes().get("username");
         String userId = (String)session.getAttributes().get("userid");
         String sessionId = session.getId();
@@ -162,7 +163,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
             }
 
 
-            redisTemplate.delete("node-Id"+ username );
+            redisTemplate.delete("nodeId:"+ username );
 
 
             for(GroupChannelProfile groupChannelProfile : groupChannelProfiles ){

@@ -43,7 +43,7 @@ public class HeartBeat {
             if(session != null)  registerUserSession.unregisterUserSessionInLocalNodeMap(username,session);
 
 
-            redisTemplate.delete("node-Id"+ username );
+            redisTemplate.delete("nodeId:"+ username );
 
 
         }

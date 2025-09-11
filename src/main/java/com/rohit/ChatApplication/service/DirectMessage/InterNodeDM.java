@@ -47,7 +47,7 @@ public class InterNodeDM {
 
     }
     @KafkaListener(
-            topics = "inter-node-delivery",
+            topics = "inter-node-dm-delivery",
             groupId = "#{T(java.util.UUID).randomUUID().toString()}", // unique group per node
             containerFactory = "deliveryContainerFactory"
     )

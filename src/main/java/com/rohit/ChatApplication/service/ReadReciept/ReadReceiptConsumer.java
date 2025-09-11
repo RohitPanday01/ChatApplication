@@ -29,7 +29,7 @@ public class ReadReceiptConsumer {
         this.kafkaTemplate = kafkaTemplate;
     }
     @KafkaListener(
-            topics = "${chat.topics.readReceipt}",
+            topics = "${chat.topics.read-receipt}",
             groupId = "readReceipt-group",
             containerFactory = "readReceiptContainerFactory"
     )
@@ -44,7 +44,7 @@ public class ReadReceiptConsumer {
                 ack.acknowledge();
             }else{
 
-                kafkaTemplate.send("chat.topics.interNodeReadReceipt", readReceipt.getSender() , readReceipt)
+                kafkaTemplate.send("chat.topics.inter-node-read-receipt", readReceipt.getSender() , readReceipt)
                         .whenComplete((result ,ex)->{
                             if(ex == null){
                                 ack.acknowledge();

@@ -36,7 +36,7 @@ public class FanOutService {
 
     public FanOutService(RedisTemplate<String ,Object> redisTemplate , RegisterUserSession registerUserSession,
                          GroupChannelServiceImpl groupChannelService , NodeIdentity nodeIdentity,
-                         @Value("${chat.topics.inter-node") String interNodeIdTopic ,ObjectMapper objectMapper,
+                         @Value("${chat.topics.groupMessage-inter-node}") String interNodeIdTopic ,ObjectMapper objectMapper,
                          KafkaTemplate<String , GroupMessageDto> kafkaTemplate){
         this.redisTemplate = redisTemplate ;
         this.registerUserSession = registerUserSession;

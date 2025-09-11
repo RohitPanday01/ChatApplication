@@ -6,8 +6,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 
 @Configuration
 @EnableAsync
@@ -32,6 +31,18 @@ public class AsyncConfig {
         executor.setThreadNamePrefix("Notification-");
         executor.initialize();
         return executor;
+    }
+
+    @Bean("groupWorkerPool")
+    public ThreadPoolExecutor groupWorkerPool() {
+        return new ThreadPoolExecutor(
+                20,                          // core threads
+                100,                         // max threads
+                60,                          // idle thread keep-alive (seconds)
+                java.util.concurrent.TimeUnit.SECONDS,
+                new java.util.concurrent.LinkedBlockingQueue<>(10000), // large queue
+                new ThreadPoolExecutor.CallerRunsPolicy() // fallback if saturated
+        );
     }
 
 }

@@ -45,7 +45,7 @@ public class InterNodeListener {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    @KafkaListener(topics = "${chat.topics.group-inter-node}")
+    @KafkaListener(topics = "${chat.topics.groupMessage-inter-node}")
     public void onInterNode(ConsumerRecord<String, GroupMessageDto> record,
                             Acknowledgment ack) {
 
