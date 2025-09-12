@@ -34,7 +34,7 @@ import java.time.LocalDate;
 public class DMDeliveryListener {
 
     private final RedisTemplate<String , Object> redisTemplate;
-    private final KafkaTemplate<String, PrivateMessageDto > kafkaTemplate;
+    private final KafkaTemplate<String, Object > kafkaTemplate;
     private final RegisterUserSession registerUserSession;
     private final ObjectMapper objectMapper;
     private final ReadReceiptProducer readReceiptProducer;
@@ -43,7 +43,7 @@ public class DMDeliveryListener {
     private final NotificationProducer notificationProducer;
 
     public DMDeliveryListener(RedisTemplate<String , Object> redisTemplate,
-                              KafkaTemplate<String, PrivateMessageDto > kafkaTemplate,
+                              KafkaTemplate<String, Object> kafkaTemplate,
                               RegisterUserSession registerUserSession,
                               ObjectMapper objectMapper,
                               NotificationProducer notificationProducer,

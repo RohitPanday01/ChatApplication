@@ -3,6 +3,8 @@ package com.rohit.ChatApplication.service.Notification;
 import com.rohit.ChatApplication.data.NotificationEvent;
 import com.rohit.ChatApplication.data.NotificationType;
 import com.rohit.ChatApplication.data.UserPublicProfile;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,12 +18,19 @@ import java.util.concurrent.ExecutionException;
 
 @Service
 @Slf4j
+
 public class NotificationProducer {
 
-    private KafkaTemplate<String , NotificationEvent> kafkaTemplate;
+    private final KafkaTemplate<String , Object> kafkaTemplate;
 
-    @Value("${chat.topics.dm-notify}")
-    private String notificationTopic;
+
+    private final String notificationTopic;
+
+    public NotificationProducer(KafkaTemplate<String, Object> kafkaTemplate,
+                                @Value("${chat.topics.dm-notify}")String notificationTopic) {
+        this.kafkaTemplate = kafkaTemplate;
+        this.notificationTopic = notificationTopic;
+    }
 
     public CompletableFuture<Void> sendNotification(UUID channelId , String messageId, NotificationType type , UserPublicProfile from,
                                  UserPublicProfile to ,String content ,String source ,String createAt){

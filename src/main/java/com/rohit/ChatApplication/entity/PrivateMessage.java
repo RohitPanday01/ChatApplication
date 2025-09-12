@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.BatchSize;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -21,7 +20,8 @@ public class PrivateMessage extends  TimeStampBase{
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID message_id;
+    @Column(name = "message_id")
+    private UUID messageId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "from_user_id",  nullable = false)
@@ -69,19 +69,19 @@ public class PrivateMessage extends  TimeStampBase{
     public boolean equals(Object o) {
         if (!(o instanceof PrivateMessage message)) return false;
         if (!super.equals(o)) return false;
-        return Objects.equals(message_id, message.message_id);
+        return Objects.equals(messageId, message.messageId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), message_id);
+        return Objects.hash(super.hashCode(), messageId);
     }
 
     @Override
     public String toString() {
         return "PrivateMessage{" +
                 "from=" + from +
-                ", message_id=" + message_id +
+                ", message_id=" + messageId +
                 ", to=" + to +
                 ", messageType=" + messageType +
                 ", privateChannel=" + privateChannel +

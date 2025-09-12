@@ -20,11 +20,16 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class DMPersistenceListener {
     private final PrivateMessageRepository privateMessageRepository;
     private final PrivateMessageServiceImpl privateMessageService;
     private final PrivateMessageBatcher batcher;
+
+    public DMPersistenceListener(PrivateMessageRepository privateMessageRepository, PrivateMessageServiceImpl privateMessageService, PrivateMessageBatcher batcher) {
+        this.privateMessageRepository = privateMessageRepository;
+        this.privateMessageService = privateMessageService;
+        this.batcher = batcher;
+    }
 
     @KafkaListener(
             topics = "${chat.topics.dm-persist}",

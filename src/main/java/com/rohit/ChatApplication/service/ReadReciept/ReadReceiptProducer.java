@@ -17,13 +17,17 @@ import java.util.concurrent.CompletionException;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class ReadReceiptProducer {
 
-    private KafkaTemplate<String , ReadReceipt> kafkaTemplate;
+    private final KafkaTemplate<String , Object> kafkaTemplate;
 
-    @Value("${chat.topics.read-receipt}")
-    private String readReceiptTopic;
+    private final String readReceiptTopic;
+
+    public ReadReceiptProducer(KafkaTemplate<String, Object> kafkaTemplate,
+                               @Value("${chat.topics.read-receipt}")String readReceiptTopic) {
+        this.kafkaTemplate = kafkaTemplate;
+        this.readReceiptTopic = readReceiptTopic;
+    }
 
 
     public CompletableFuture<Void> sendReadReceipt(String messageId , String  channelId, String sender ,

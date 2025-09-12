@@ -39,7 +39,7 @@ public class ReadReceiptConsumer {
             WebSocketSession session = registerUserSession.getUserSessionInLocalNodeMap(readReceipt.getSender());
 
 
-            if(session.isOpen()){
+            if(session != null && session.isOpen() ){
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(readReceipt)));
                 ack.acknowledge();
             }else{

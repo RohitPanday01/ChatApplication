@@ -13,6 +13,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
+
 
 @Component
 @Slf4j
@@ -43,19 +45,25 @@ public class GroupMessageConsumer {
             return;
         }
 
-        groupWorkerPool.submit(() -> {
-            try {
-                fanOutService.fanOutGroupMessage(msg);
+        CompletableFuture.runAsync(() -> fanOutService.fanOutGroupMessage(msg), groupWorkerPool)
+                .whenComplete((v, ex) -> {
+                    if (ex == null) ack.acknowledge();
+                    else log.error("failed", ex);
+                });
 
-                // ✅ only ack if success
-                ack.acknowledge();
-
-            } catch (Exception ex) {
-                log.error("Exception in fanOutService, NOT acking. Kafka will retry.", ex);
-
-                // optionally: push to DLQ here if retries exceed limit
-            }
-        });
+//        groupWorkerPool.submit(() -> {
+//            try {
+//                fanOutService.fanOutGroupMessage(msg);
+//
+//                // ✅ only ack if success
+//                ack.acknowledge();
+//
+//            } catch (Exception ex) {
+//                log.error("Exception in fanOutService, NOT acking. Kafka will retry.", ex);
+//
+//                // optionally: push to DLQ here if retries exceed limit
+//            }
+//        });
 
 
 
