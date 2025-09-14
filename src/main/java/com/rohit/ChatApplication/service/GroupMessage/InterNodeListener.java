@@ -30,12 +30,12 @@ public class InterNodeListener {
     private final NodeIdentity nodeIdentity ;
     private final String interNodeIdTopic;
     private  final ObjectMapper objectMapper;
-    private final KafkaTemplate<String , GroupMessageDto> kafkaTemplate;
+    private final KafkaTemplate<String , Object> kafkaTemplate;
 
     public InterNodeListener(RedisTemplate<String ,Object> redisTemplate , RegisterUserSession registerUserSession,
                          GroupChannelServiceImpl groupChannelService , NodeIdentity nodeIdentity,
                          @Value("${chat.topics.inter-node") String interNodeIdTopic , ObjectMapper objectMapper,
-                         KafkaTemplate<String , GroupMessageDto> kafkaTemplate){
+                         KafkaTemplate<String , Object> kafkaTemplate){
         this.redisTemplate = redisTemplate ;
         this.registerUserSession = registerUserSession;
         this.groupChannelService = groupChannelService;
@@ -45,7 +45,10 @@ public class InterNodeListener {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    @KafkaListener(topics = "${chat.topics.groupMessage-inter-node}")
+    @KafkaListener(topics = "${chat.topics.groupMessage-inter-node}",
+            groupId = "#{T(java.util.UUID).randomUUID().toString()}", // unique group per node
+            containerFactory = "GroupMessageDeliveryContainer"
+            )
     public void onInterNode(ConsumerRecord<String, GroupMessageDto> record,
                             Acknowledgment ack) {
 

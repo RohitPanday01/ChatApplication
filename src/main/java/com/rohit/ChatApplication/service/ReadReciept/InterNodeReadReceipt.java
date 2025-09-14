@@ -18,10 +18,10 @@ public class InterNodeReadReceipt {
 
     private final RegisterUserSession registerUserSession;
     private final ObjectMapper objectMapper;
-    private final KafkaTemplate<String , ReadReceipt> kafkaTemplate;
+    private final KafkaTemplate<String , Object> kafkaTemplate;
 
     public InterNodeReadReceipt(RegisterUserSession registerUserSession, ObjectMapper objectMapper,
-                               KafkaTemplate<String, ReadReceipt> kafkaTemplate){
+                               KafkaTemplate<String, Object> kafkaTemplate){
         this.registerUserSession = registerUserSession;
         this.objectMapper = objectMapper;
         this.kafkaTemplate = kafkaTemplate;

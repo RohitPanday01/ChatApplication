@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rohit.ChatApplication.data.NotificationType;
 import com.rohit.ChatApplication.data.ReadReceipt;
 import com.rohit.ChatApplication.data.ReceiptType;
+import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
 import com.rohit.ChatApplication.service.Notification.NotificationProducer;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
@@ -38,6 +39,7 @@ public class DMDeliveryListener {
     private final RegisterUserSession registerUserSession;
     private final ObjectMapper objectMapper;
     private final ReadReceiptProducer readReceiptProducer;
+    private final NodeIdentity nodeIdentity;
 
 
     private final NotificationProducer notificationProducer;
@@ -47,13 +49,14 @@ public class DMDeliveryListener {
                               RegisterUserSession registerUserSession,
                               ObjectMapper objectMapper,
                               NotificationProducer notificationProducer,
-                              ReadReceiptProducer readReceiptProducer){
+                              ReadReceiptProducer readReceiptProducer,NodeIdentity nodeIdentity){
         this.redisTemplate = redisTemplate ;
         this.kafkaTemplate = kafkaTemplate;
         this.registerUserSession = registerUserSession;
         this.objectMapper = objectMapper;
         this.notificationProducer = notificationProducer;
         this.readReceiptProducer = readReceiptProducer;
+        this.nodeIdentity = nodeIdentity;
     }
 
 
@@ -108,7 +111,10 @@ public class DMDeliveryListener {
 
                 }else {
                     // user is Online on But Other Node
-                    kafkaTemplate.send("inter-node-dm-delivery", receiverName, messageDto)
+
+                    String receiverNodeId = (String) redisTemplate.opsForValue().get("nodeId:" + receiverName);
+
+                    kafkaTemplate.send("inter-node-dm-delivery", receiverNodeId, messageDto)
                             .whenComplete((result, ex) -> {
                         if (ex == null) {
                             ack.acknowledge();

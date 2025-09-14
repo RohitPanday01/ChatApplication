@@ -3,16 +3,21 @@ package com.rohit.ChatApplication.service.DirectMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rohit.ChatApplication.data.NotificationType;
 import com.rohit.ChatApplication.data.ReceiptType;
+import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
 import com.rohit.ChatApplication.service.Notification.NotificationProducer;
-import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
+
+
 import com.rohit.ChatApplication.service.RegisterUserSession;
+import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -26,24 +31,26 @@ import java.time.LocalDate;
 public class InterNodeDM {
 
     private final RedisTemplate<String , Object> redisTemplate;
-    private final KafkaTemplate<String, PrivateMessageDto > kafkaTemplate;
+    private final KafkaTemplate<String, Object > kafkaTemplate;
     private final RegisterUserSession registerUserSession;
     private final ObjectMapper objectMapper;
     private final ReadReceiptProducer readReceiptProducer;
+    private  final NodeIdentity nodeIdentity;
 
     private final NotificationProducer notificationProducer;
 
     public InterNodeDM(RedisTemplate<String , Object> redisTemplate,
-                       KafkaTemplate<String, PrivateMessageDto > kafkaTemplate,
+                       KafkaTemplate<String, Object > kafkaTemplate,
                        RegisterUserSession registerUserSession,
                        ObjectMapper objectMapper,ReadReceiptProducer readReceiptProducer,
-                       NotificationProducer notificationProducer){
+                       NotificationProducer notificationProducer, NodeIdentity nodeIdentity){
         this.redisTemplate = redisTemplate ;
         this.kafkaTemplate = kafkaTemplate;
         this.registerUserSession = registerUserSession;
         this.readReceiptProducer = readReceiptProducer;
         this.objectMapper = objectMapper;
         this.notificationProducer = notificationProducer;
+        this.nodeIdentity = nodeIdentity;
 
     }
     @KafkaListener(
@@ -51,13 +58,19 @@ public class InterNodeDM {
             groupId = "#{T(java.util.UUID).randomUUID().toString()}", // unique group per node
             containerFactory = "deliveryContainerFactory"
     )
-    public void onInterNodeDelivery(PrivateMessageDto messageDto,  Acknowledgment ack ) {
+    public void onInterNodeDelivery(PrivateMessageDto messageDto,
+                                    @Header(KafkaHeaders.RECEIVED_KEY) String key, Acknowledgment ack ) {
+
         String receiverName  = messageDto.getTo().getUsername();
         String receiverId = messageDto.getTo().getId();
+        String thisNodeId = nodeIdentity.getNodeId();
+
+        if(thisNodeId.equals(key)){
+            ack.acknowledge();
+            return;
+        }
 
         String dedupKey = String.format("Delivered%s%s",receiverId, LocalDate.now());
-
-
         try{
 
             Double lastSeenScore = redisTemplate.opsForZSet().score("online_users_lastPing", receiverName);
@@ -91,17 +104,6 @@ public class InterNodeDM {
                                 } else {
                                     log.error("ReadReceipt failed , Kafka will retry {}", messageDto.getId(), ex);
 
-                                }
-                            });
-
-                }else {
-                    // user is Online on But Other Node
-                    kafkaTemplate.send("inter-node-delivery", receiverName, messageDto)
-                            .whenComplete((result, ex) -> {
-                                if (ex == null) {
-                                    ack.acknowledge();
-                                } else {
-                                    log.error("not  able to publish to itnernode delivery kafka will retry");
                                 }
                             });
                 }

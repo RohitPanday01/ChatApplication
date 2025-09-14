@@ -32,12 +32,12 @@ public class FanOutService {
     private final NodeIdentity nodeIdentity;
     private final String interNodeIdTopic;
     private  final ObjectMapper objectMapper;
-    private final KafkaTemplate<String , GroupMessageDto> kafkaTemplate;
+    private final KafkaTemplate<String , Object> kafkaTemplate;
 
     public FanOutService(RedisTemplate<String ,Object> redisTemplate , RegisterUserSession registerUserSession,
                          GroupChannelServiceImpl groupChannelService , NodeIdentity nodeIdentity,
                          @Value("${chat.topics.groupMessage-inter-node}") String interNodeIdTopic ,ObjectMapper objectMapper,
-                         KafkaTemplate<String , GroupMessageDto> kafkaTemplate){
+                         KafkaTemplate<String , Object> kafkaTemplate){
         this.redisTemplate = redisTemplate ;
         this.registerUserSession = registerUserSession;
         this.groupChannelService = groupChannelService;
