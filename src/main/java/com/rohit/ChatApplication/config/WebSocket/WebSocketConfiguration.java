@@ -35,7 +35,7 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 
         registry
-                .addHandler(presenceWSHandler ,"/ws/channel/presence/subscribe")
+                .addHandler(presenceWSHandler ,"/ws/chat")
                 .addInterceptors(jwtCookieHandshakeInterceptor)
                 .setAllowedOrigins("*");
     }

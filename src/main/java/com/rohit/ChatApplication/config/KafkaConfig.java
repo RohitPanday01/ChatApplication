@@ -1,9 +1,11 @@
 package com.rohit.ChatApplication.config;
 
-import com.fasterxml.jackson.databind.JsonSerializer;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rohit.ChatApplication.data.NotificationEvent;
 import com.rohit.ChatApplication.data.ReadReceipt;
 import com.rohit.ChatApplication.data.message.GroupMessageDto;
+
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -12,6 +14,7 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +25,7 @@ import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.FixedBackOff;
 
 import java.io.IOException;
@@ -47,10 +51,23 @@ public class KafkaConfig {
         props.put(ProducerConfig.LINGER_MS_CONFIG, 10);
         props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 67108864);
         props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "lz4");
-        props.put(ProducerConfig.ACKS_CONFIG, "1");
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
         props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         return props;
+    }
+
+    @Bean
+    public ProducerFactory<String, Object> transactionalProducerFactory(){
+        DefaultKafkaProducerFactory<String, Object> factory =
+                new DefaultKafkaProducerFactory<>(producerConfigs());
+        factory.setTransactionIdPrefix("chat-tx-");
+        return factory;
+    }
+
+    @Bean(name = "transactionalKafkaTemplate")
+    public KafkaTemplate<String, Object> transactionalKafkaTemplate() {
+        return new KafkaTemplate<>(transactionalProducerFactory());
     }
 
     @Bean
@@ -66,15 +83,17 @@ public class KafkaConfig {
 
 
     @Bean
-    public ConsumerFactory<String, PrivateMessageDto> persistConsumerFactory() {
+    public <T> ConsumerFactory<String, T> persistConsumerFactory(Class<T> targetType) {
         Map<String, Object > props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "dm-persistence-svc");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
-        JsonDeserializer<PrivateMessageDto> deserializer = new JsonDeserializer<>(
-                PrivateMessageDto.class);
+
+        JsonDeserializer<T> deserializer =
+                new JsonDeserializer<>(targetType);
+        deserializer.ignoreTypeHeaders();  // always bind to PrivateMessageDto
         deserializer.addTrustedPackages("*");
 
         return new DefaultKafkaConsumerFactory<>(props,
@@ -101,7 +120,7 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, PrivateMessageDto> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
-        factory.setConsumerFactory(persistConsumerFactory());
+        factory.setConsumerFactory(persistConsumerFactory(PrivateMessageDto.class));
         factory.setCommonErrorHandler(errorHandler);
         factory.setBatchListener(true);
         factory.setConcurrency(2);

@@ -15,5 +15,4 @@ public class TypingEvent {
     private boolean isTyping;
     private long ts;
 
-
 }

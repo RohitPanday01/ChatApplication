@@ -1,9 +1,12 @@
 package com.rohit.ChatApplication.interceptor;
 
+import com.rohit.ChatApplication.data.UserDetail;
 import com.rohit.ChatApplication.service.JwtService;
 import com.rohit.ChatApplication.service.UsersDetailsServiceImpl;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
@@ -20,6 +23,8 @@ import java.util.Map;
 @Component
 public class JwtCookieHandshakeInterceptor implements HandshakeInterceptor {
 
+    private final Logger log = LoggerFactory.getLogger(JwtCookieHandshakeInterceptor.class);
+
     private final JwtService jwtService;
     private final UsersDetailsServiceImpl usersDetailsService;
 
@@ -35,12 +40,16 @@ public class JwtCookieHandshakeInterceptor implements HandshakeInterceptor {
             HttpServletRequest servletRequest =  ((ServletServerHttpRequest) request).getServletRequest();
             String jwtToken  = getJwtFromCookie(servletRequest);
 
+            log.info("->>>>>>>>>>>>>>>>>> jwtToken in JwtCookieHandshakeInterceptor: {}", jwtToken);
+
             if (jwtToken != null) {
                 String username =  jwtService.extractUserName(jwtToken);
-                UserDetails userDetails = usersDetailsService.loadUserByUsername(username);
+                UserDetail userDetails = usersDetailsService.loadUserByUsername(username);
                 if (jwtService.validateToken(jwtToken, userDetails)){
                     UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                    attributes.put("userDetail", userDetails);
+
+                    response.setStatusCode(HttpStatus.ACCEPTED);
                     return true;
                 }
             }

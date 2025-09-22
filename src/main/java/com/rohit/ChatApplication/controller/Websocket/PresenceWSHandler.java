@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -93,8 +94,15 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        UserDetail userDetail = (UserDetail) session.getAttributes().get("userDetail");
+        if (userDetail == null) {
+            log.error("->>>>>>>>>>>WebSocket handshake failed: user not authenticated");
+            session.close(CloseStatus.NOT_ACCEPTABLE.withReason("Authentication required"));
+            return;
+        }
 
-       UserDetail userDetail =  AuthUtil.currentUserDetail();
+        log.info("->>>>>>>>>>>>>User connected via WS: {}", userDetail.getUsername());
+
        String username = userDetail.getUsername();
         String userId = userDetail.getId();
         session.getAttributes().put("userid", userId);
@@ -120,22 +128,25 @@ public class PresenceWSHandler extends TextWebSocketHandler {
        }
 
        redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
+
        presencePublisher.publish(username , "online");
+       log.info("->>>>>>>>> published user is Online to redis Stream publisher: {}", username);
     }
 
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, TextMessage message) throws Exception {
 
          JsonNode node = mapper.readTree(message.getPayload());
-         String type = String.valueOf(node.path("type"));
+         String type = node.path("type").asText(null);
 
          if("typing".equalsIgnoreCase(type)){
 
              handleTyping(node, session );
 
          }else if("ping".equalsIgnoreCase(type)){
+             String username = (String) session.getAttributes().get("username");
+             String userId = (String)session.getAttributes().get("userid");
 
-            String username =  AuthUtil.currentUserDetail().getUsername();
             redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
             session.sendMessage(new TextMessage("pong"));
 
@@ -152,6 +163,13 @@ public class PresenceWSHandler extends TextWebSocketHandler {
         String username = (String) session.getAttributes().get("username");
         String userId = (String)session.getAttributes().get("userid");
         String sessionId = session.getId();
+
+
+
+        if (username == null || userId == null) {
+            log.warn("afterConnectionClosed called but username or userId is null, skipping cleanup");
+            return;
+        }
 
 
         try{
@@ -199,7 +217,11 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
     private void handleTyping(JsonNode node , WebSocketSession session)
             throws JsonProcessingException {
-        String username =  AuthUtil.currentUserDetail().getUsername();
+        UserDetail userDetail = (UserDetail) session.getAttributes().get("userDetail");
+
+
+        String username = userDetail.getUsername();
+//        String userId = userDetail.getId();
         String channelId =  node.path("channelId").asText();
         String to = node.path("to").asText(null);
         boolean typing =  node.path("isTyping").asBoolean();

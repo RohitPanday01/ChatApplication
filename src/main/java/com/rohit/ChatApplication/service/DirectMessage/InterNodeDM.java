@@ -11,6 +11,8 @@ import com.rohit.ChatApplication.service.Notification.NotificationProducer;
 import com.rohit.ChatApplication.service.RegisterUserSession;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -27,8 +29,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 @Component
-@Slf4j
 public class InterNodeDM {
+
+    private final Logger log = LoggerFactory.getLogger(InterNodeDM.class);
 
     private final RedisTemplate<String , Object> redisTemplate;
     private final KafkaTemplate<String, Object > kafkaTemplate;
@@ -65,7 +68,9 @@ public class InterNodeDM {
         String receiverId = messageDto.getTo().getId();
         String thisNodeId = nodeIdentity.getNodeId();
 
-        if(thisNodeId.equals(key)){
+        log.info("->>>>>>>>>>>>> inside inter Node DM and this nodeid is: {}" , thisNodeId);
+
+        if(!thisNodeId.equals(key)){
             ack.acknowledge();
             return;
         }
@@ -77,9 +82,7 @@ public class InterNodeDM {
 
             boolean isOnline = false ;
             if(lastSeenScore != null){
-                long now = System.currentTimeMillis();
-                long ttlMillis = 10_000;
-                isOnline = lastSeenScore >= (now - ttlMillis);
+                isOnline = true;
             }
 
             if(isOnline){
@@ -96,7 +99,7 @@ public class InterNodeDM {
                     }
 
                     readReceiptProducer.sendReadReceipt(messageDto.getId().toString() ,messageDto.getChannel().toString(),
-                                    messageDto.getFrom().getUsername(), messageDto.getTo().getUsername(), ReceiptType.SEEN,
+                                    messageDto.getFrom().getUsername(), messageDto.getTo().getUsername(), ReceiptType.DELIVERED,
                                     Instant.now())
                             .whenComplete((v, ex) -> {
                                 if (ex == null) {
@@ -112,7 +115,7 @@ public class InterNodeDM {
 
                 notificationProducer.sendNotification(messageDto.getChannel(), messageDto.getId().toString(),
                                 NotificationType.PRIVATE_MESSAGE, messageDto.getFrom() , messageDto.getTo(),
-                                messageDto.getContent(), "dm-service" , messageDto.getCreateAt() )
+                                messageDto.getContent(), "dm-service" , messageDto.getSentAt() )
                         .whenComplete((v, ex) -> {
                             if (ex == null) {
                                 ack.acknowledge(); // only ack after success

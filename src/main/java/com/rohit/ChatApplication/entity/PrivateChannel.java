@@ -2,7 +2,9 @@ package com.rohit.ChatApplication.entity;
 
 import com.rohit.ChatApplication.exception.InvalidOperation;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.BatchSize;
 
@@ -16,6 +18,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @BatchSize(size = 64)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PrivateChannel extends TimeStampBase{
 
     @Id
@@ -30,7 +33,7 @@ public class PrivateChannel extends TimeStampBase{
     @JoinColumn(name = "user2_id")
     private User user2;
 
-    @OneToMany( mappedBy = "privateChannel" )
+    @OneToMany( mappedBy = "privateChannel",cascade = CascadeType.ALL, orphanRemoval = true )
     private List<PrivateMessage> messages;
 
     @OneToOne
@@ -81,10 +84,10 @@ public class PrivateChannel extends TimeStampBase{
 
     public User anotherMember(User member){
         if(member.getUserId() == user1.getUserId()){
-            return user1;
+            return user2;
         }
 
-        return user2;
+        return user1;
     }
 
     public void  sendMessage(User messageSender , User messageReceiver , MessageType messageType , String content  ){
@@ -92,17 +95,18 @@ public class PrivateChannel extends TimeStampBase{
             throw new IllegalStateException("Messaging is blocked in this chat.");
         }
 
-        PrivateMessage message = new PrivateMessage(this , messageSender , messageReceiver ,messageType, content );
+        PrivateMessage message = new PrivateMessage(null ,this , messageSender , messageReceiver ,messageType, content );
         messages.add(message);
         lastMessage = message;
     }
 
     public PrivateMessage addMessage(User from ,MessageType messageType, String content ) throws InvalidOperation{
-        if(user1.getUserId() != from.getUserId() || user2.getUserId() != from.getUserId()){
+        if (!user1.getUserId().equals(from.getUserId())
+                && !user2.getUserId().equals(from.getUserId())) {
             throw new InvalidOperation("sender can't send message in this channel");
         }
 
-        PrivateMessage privateMessage = new PrivateMessage(this, from, anotherMember(from) , messageType , content );
+        PrivateMessage privateMessage = new PrivateMessage(null,this, from, anotherMember(from) , messageType , content );
         
         messages.add(privateMessage);
         lastMessage = privateMessage;

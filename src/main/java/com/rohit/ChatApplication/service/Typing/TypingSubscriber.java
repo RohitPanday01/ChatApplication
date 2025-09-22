@@ -30,14 +30,16 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
     private final ObjectMapper objectMapper;
     private final RedisMessageListenerContainer container;
     private  final RegisterUserSessionManager registerUserSessionManager;
+    private final  RedisTemplate<String , Object> redisTemplate ;
     private final  Map<String , MessageListener> groupListeners = new ConcurrentHashMap<>();
     private final Map<String, MessageListener> privateChannelListeners = new ConcurrentHashMap<>();
 
     public TypingSubscriber(ObjectMapper objectMapper, RedisMessageListenerContainer container,
-                            RegisterUserSessionManager registerUserSessionManager ){
+                            RegisterUserSessionManager registerUserSessionManager, RedisTemplate<String , Object> redisTemplate){
         this.objectMapper = objectMapper;
         this.container = container;
         this.registerUserSessionManager = registerUserSessionManager;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -46,10 +48,10 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
         String channel = "direct:" + channelId + ":typing";
         MessageListener listener = (message, pattern) -> {
             try {
-                String body = new String(message.getBody(), StandardCharsets.UTF_8);
-
-                TypingEvent event = objectMapper.readValue(body, TypingEvent.class);
-
+//                String body = new String(message.getBody(), StandardCharsets.UTF_8);
+//
+//                TypingEvent event = objectMapper.readValue(body, TypingEvent.class);
+                TypingEvent event = (TypingEvent) redisTemplate.getValueSerializer().deserialize(message.getBody());
                 WebSocketSession session  = registerUserSessionManager.getUserSessionInLocalNodeMap(event.getTo());
 
                 if(session != null){
@@ -80,9 +82,11 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
 
         MessageListener listener = (message, pattern) -> {
             try {
-                String body = new String(message.getBody(), StandardCharsets.UTF_8);
-
-                TypingEvent event = objectMapper.readValue(body, TypingEvent.class);
+//                String body = new String(message.getBody(), StandardCharsets.UTF_8);
+//
+//
+//                TypingEvent event = objectMapper.readValue(body, TypingEvent.class);
+                TypingEvent event = (TypingEvent) redisTemplate.getValueSerializer().deserialize(message.getBody());
 
                 Set<WebSocketSession> sessions = registerUserSessionManager.getUserSessionsInTheirGroups(groupId);
 

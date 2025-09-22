@@ -39,11 +39,11 @@ public class ReadReceiptProducer {
 
         return kafkaTemplate.send(readReceiptTopic, receiver, event)
                 .thenAccept(result -> {
-                    log.debug("Successfully sent read receipt to topic {}", messageId);
+                    log.debug("->>>>>>>>>>>>Successfully sent read receipt to topic {}", messageId);
 
 
                 }).exceptionally(ex ->{
-                    log.error("Failed to send read receipt for {}. Will bubble up.", messageId, ex);
+                    log.error("->>>>>>>>>>>>Failed to send read receipt for {}. Will bubble up.", messageId, ex);
                     throw new CompletionException(ex);
                 });
 

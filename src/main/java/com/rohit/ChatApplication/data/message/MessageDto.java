@@ -1,5 +1,6 @@
 package com.rohit.ChatApplication.data.message;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.rohit.ChatApplication.data.UserPublicProfile;
 import com.rohit.ChatApplication.entity.MessageType;
@@ -16,7 +17,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @Jacksonized
 @Builder
-@JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
 public class MessageDto {
 
     protected UUID id;

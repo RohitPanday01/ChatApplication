@@ -14,9 +14,12 @@ import com.rohit.ChatApplication.exception.InvalidOperation;
 import com.rohit.ChatApplication.exception.UserDoesNotExist;
 import com.rohit.ChatApplication.service.DirectMessage.DMDeliveryListener;
 import com.rohit.ChatApplication.service.DirectMessage.DirectMessageProducer;
+import com.rohit.ChatApplication.service.GroupMessage.FanOutService;
 import com.rohit.ChatApplication.service.channel.PrivateChannelServiceImpl;
 import com.rohit.ChatApplication.service.message.PrivateMessageServiceImpl;
 import com.rohit.ChatApplication.util.AuthUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -34,6 +37,7 @@ import java.util.concurrent.CompletableFuture;
 @RestController
 @RequestMapping("/api/v1/channel/private")
 public class PrivateChannelController {
+    private final Logger log = LoggerFactory.getLogger(PrivateChannelController.class);
 
 
     private final RedisTemplate<String, Object> redisTemplate;
@@ -47,11 +51,11 @@ public class PrivateChannelController {
     public PrivateChannelController(
             RedisTemplate<String, Object> redisTemplate,
             PrivateChannelServiceImpl privateChannelService,
-            PrivateMessageServiceImpl privateMessageService
-    ) {
+            PrivateMessageServiceImpl privateMessageService, DirectMessageProducer directMessageProducer) {
         this.redisTemplate = redisTemplate;
         this.privateChannelService = privateChannelService;
         this.privateMessageService = privateMessageService;
+        this.directMessageProducer = directMessageProducer;
     }
 
     @GetMapping(path = "{channelId}/profile")
@@ -115,7 +119,7 @@ public class PrivateChannelController {
 
 
     @PostMapping("private/publishMessage")
-    public CompletableFuture<ResponseEntity<String>> handlePrivateMessage(@RequestBody  PublishMessageRequest request)
+    public ResponseEntity<String> handlePrivateMessage(@RequestBody  PublishMessageRequest request)
             throws UserDoesNotExist, ChannelDoesNotExist, InvalidOperation {
 
         String senderId = AuthUtil.currentUserDetail().getId();
@@ -140,12 +144,20 @@ public class PrivateChannelController {
                 request.getMessageType()
         );
 
-       return  directMessageProducer.sendDirectMessage(privateMessageDto)
-                .thenApply(v -> ResponseEntity.ok("Message Sent"))
-                .exceptionally(ex ->
-                        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body("Failed to enqueue message: " + ex.getMessage())
-                );
+        if (privateMessageDto == null) {
+            throw new IllegalStateException("Failed to create message DTO");
+        }
+
+
+
+        try {
+            // synchronous send (waits until producer sends)
+            directMessageProducer.sendDirectMessage(privateMessageDto).join();
+            return ResponseEntity.ok("Message Sent");
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to enqueue message: " + ex.getMessage());
+        }
 
 //        messageProducer.sendDirectMessage(dm); // fire & forget
 //        return ResponseEntity.accepted().body("Message sending...");

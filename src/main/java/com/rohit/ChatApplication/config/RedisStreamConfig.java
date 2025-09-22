@@ -5,6 +5,7 @@ import com.rohit.ChatApplication.service.UserPresence.PresenceStreamListener;
 import jakarta.annotation.PostConstruct;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -13,6 +14,8 @@ import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
 import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.core.RedisTemplate;
+
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -29,7 +32,7 @@ public class RedisStreamConfig {
 
     private final RedisConnectionFactory redisConnectionFactory;
     private final PresenceStreamListener presenceStreamListener;
-    private final RedisTemplate<String , Object> redisTemplate;
+    private final RedisTemplate<String ,String> redisTemplate;
 
     private final ThreadPoolTaskExecutor presenceTaskExecutor;
 
@@ -50,7 +53,7 @@ public class RedisStreamConfig {
 
     public RedisStreamConfig(RedisConnectionFactory redisConnectionFactory,
                              PresenceStreamListener presenceStreamListener ,
-                             RedisTemplate<String , Object> redisTemplate,
+                             @Qualifier("redisStringTemplate") RedisTemplate<String, String> redisTemplate,
                              ThreadPoolTaskExecutor presenceTaskExecutor){
         this.presenceStreamListener = presenceStreamListener;
         this.redisConnectionFactory = redisConnectionFactory;
@@ -81,18 +84,18 @@ public class RedisStreamConfig {
 
 
     @Bean(initMethod = "start", destroyMethod = "stop")
-    public StreamMessageListenerContainer<String,
-            MapRecord<String,String ,String>> streamMessageListenerContainer() {
+    public StreamMessageListenerContainer<String, @NonNull MapRecord<String,String ,String>>
+    streamMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
+                                   PresenceStreamListener presenceStreamListener,
+                                   @Qualifier("redisStringTemplate") RedisTemplate<String, String> redisStringTemplate,
+                                   ThreadPoolTaskExecutor presenceTaskExecutor) {
 
-        StreamMessageListenerContainer.StreamMessageListenerContainerOptions<String,
-                MapRecord<String, String, String>> options =
+        StreamMessageListenerContainer.
+                StreamMessageListenerContainerOptions<String, @NonNull MapRecord<String, String, String>> options =
                 StreamMessageListenerContainer.StreamMessageListenerContainerOptions.builder()
                         .batchSize(10)
                         .executor(presenceTaskExecutor)
                         .pollTimeout(Duration.ofSeconds(2))
-                        .errorHandler(throwable -> {
-                            System.err.println("Redis Stream Error: " + throwable.getMessage());
-                        })
                         .build();
 
         StreamMessageListenerContainer<String, @NonNull MapRecord<String, String, String>> container =

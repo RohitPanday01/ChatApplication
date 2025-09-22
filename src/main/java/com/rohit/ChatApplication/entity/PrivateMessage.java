@@ -1,6 +1,7 @@
 package com.rohit.ChatApplication.entity;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,10 +13,10 @@ import java.util.UUID;
 
 @Entity
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 @BatchSize(size = 128)
 @Table(name = "private_message")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PrivateMessage extends  TimeStampBase{
 
     @Id
@@ -31,7 +32,7 @@ public class PrivateMessage extends  TimeStampBase{
     @JoinColumn(name = "to_user_id", nullable = false)
     private User to;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY )
     @JoinColumn(name = "private_channel_id",  nullable = false)
     private PrivateChannel privateChannel;
 
@@ -53,10 +54,11 @@ public class PrivateMessage extends  TimeStampBase{
 
 
 
-    public PrivateMessage(PrivateChannel privateChannel , User from , User to ,MessageType messageType, String content ){
+    public PrivateMessage(UUID messageId ,PrivateChannel privateChannel , User from , User to ,MessageType messageType, String content ){
         if(Objects.equals(from, to)){
             throw new IllegalArgumentException("From cannot Be Same as to ");
         }
+        if(messageId == null) this.messageId = UUID.randomUUID();
         this.privateChannel = privateChannel;
         this.from = from;
         this.to = to;

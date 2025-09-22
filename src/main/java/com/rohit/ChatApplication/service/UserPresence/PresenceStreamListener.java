@@ -1,7 +1,11 @@
 package com.rohit.ChatApplication.service.UserPresence;
 
 import com.rohit.ChatApplication.controller.Websocket.PresenceWSHandler;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.stream.StreamListener;
@@ -13,6 +17,7 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -21,30 +26,38 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 @Service
-public class PresenceStreamListener implements StreamListener<String, MapRecord<String, String, String>> {
+public class PresenceStreamListener implements StreamListener<String,  MapRecord<String, String, String>> {
 
-
+    private final Logger log = LoggerFactory.getLogger(PresenceStreamListener.class);
     private final PresenceNotification presenceNotification;
+
+
     private final ThreadPoolTaskExecutor presenceExecutor;
 
-    public PresenceStreamListener(PresenceNotification presenceNotification,
-                                  ThreadPoolTaskExecutor presenceExecutor) {
+    public PresenceStreamListener(PresenceNotification presenceNotification ,
+                                  @Qualifier("presenceTaskExecutor") ThreadPoolTaskExecutor presenceExecutor) {
         this.presenceNotification = presenceNotification;
         this.presenceExecutor = presenceExecutor;
+
     }
 
     @Override
     public void onMessage(MapRecord<String, String, String> message) {
+        log.info("-->>>>>>>>>>>>>>> message got from Stream is :{}", message);
 
-        presenceExecutor.execute(()->handlePresence(message));
+        presenceExecutor.submit(()->handlePresence(message));
     }
 
     private void handlePresence(MapRecord<String, String, String> message) {
-        String username = message.getValue().get("userName");
-        String status = message.getValue().get("status");
-        String timeStamp = message.getValue().get("TimeStamp");
+        Map<String, String> data = message.getValue();
+        String username = data.get("username");
+        String status = data.get("status");
+        String timeStamp = data.get("TimeStamp");
+
+        log.info("->>>>>>>>Message from stream -> username: {}, status: {}, timestamp: {}", username, status, timeStamp);
 
         presenceNotification.processPresenceUpdate(username , status , timeStamp);
+        log.info("->>>>>>>>> sent to Process Presence Update in Presence Notification: {}", username);
 
     }
 
@@ -151,12 +164,4 @@ public class PresenceStreamListener implements StreamListener<String, MapRecord<
 //        log.error("Max retries exceeded for message {}", message.getId());
 //
 //    }
-
-//    @PreDestroy
-//    public void shutdown() {
-//        executorService.shutdownNow();
-//    }
-
-
-
 

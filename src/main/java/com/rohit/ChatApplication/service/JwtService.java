@@ -16,7 +16,7 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
+    @Value("${JWT_SECRET}")
     private String secretKey;
 
     private static final  long ACCESS_TOKEN_VALIDITY = 1000 * 60 * 60 * 10;

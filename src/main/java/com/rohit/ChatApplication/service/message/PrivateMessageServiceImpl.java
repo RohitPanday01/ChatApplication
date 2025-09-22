@@ -64,6 +64,7 @@ public class PrivateMessageServiceImpl{
             User to = channel.anotherMember(from);
 
             PrivateMessage message = new PrivateMessage(
+                    messageDto.getId(),
                     channel,
                     from,
                     to,
@@ -96,18 +97,11 @@ public class PrivateMessageServiceImpl{
             PrivateChannel privateChannel = getChannelById(channelUUID);
             PrivateMessage privateMessage = privateChannel.addMessage(user,messageType, Content);
 
-            privateChannelRepository.saveAndFlush(privateChannel);
+//            privateChannelRepository.saveAndFlush(privateChannel);
             return new PrivateMessageDto(privateMessage);
 
-        } catch (ChannelDoesNotExist e) {
-            System.err.println("Channel not found: " + e.getMessage());
-            return null;
-        } catch (UserDoesNotExist e) {
-            System.err.println("User not found: " + e.getMessage());
-            return null;
-        } catch (InvalidOperation e) {
-            System.err.println("Invalid operation: " + e.getMessage());
-            return null;
+        } catch (ChannelDoesNotExist | UserDoesNotExist | InvalidOperation e) {
+            throw new RuntimeException("Failed to create message: " + e.getMessage(), e);
         }
 
     }

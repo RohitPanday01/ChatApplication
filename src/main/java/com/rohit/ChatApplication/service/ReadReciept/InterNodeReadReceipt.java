@@ -40,17 +40,6 @@ public class InterNodeReadReceipt {
             if(session.isOpen()){
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(readReceipt)));
                 ack.acknowledge();
-            }else{
-
-                kafkaTemplate.send("chat.topics.inter-node-read-receipt", readReceipt.getSender() , readReceipt)
-                        .whenComplete((result ,ex)->{
-                            if(ex == null){
-                                ack.acknowledge();
-                            }else{
-                                log.error("failed to send to interNode topic {}, will retry", readReceipt.getMessageId() , ex);
-                            }
-                        });
-
             }
 
         } catch (IOException e) {

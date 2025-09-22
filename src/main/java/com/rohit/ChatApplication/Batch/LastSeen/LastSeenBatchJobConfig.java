@@ -26,7 +26,7 @@ public class LastSeenBatchJobConfig {
                                    LastSeenWriter lastSeenWriter,RedisLastSeenReader redisLastSeenReader,
                                    PlatformTransactionManager transactionManager ){
         return new StepBuilder("updateLastSeenStep", jobRepository)
-                .<UserLastSeen, UserLastSeen>chunk(100, transactionManager)
+                .<UserLastSeen, UserLastSeen>chunk(2, transactionManager)
                 .reader(redisLastSeenReader)
                 .writer(lastSeenWriter)
                 .build();

@@ -3,6 +3,7 @@ package com.rohit.ChatApplication.service.Typing;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rohit.ChatApplication.controller.Websocket.PresenceWSHandler;
+import com.rohit.ChatApplication.data.TypingEvent;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -22,19 +23,17 @@ public class TypingEventPublisher {
 
     public void publishTypingEvent(String from , String to , String channelId , boolean isTyping) throws JsonProcessingException {
 
-        var payload = Map.of(
-                "event", "typing",
-                "from", from,
-                "channelId", channelId,
-                "to", to == null ? "" : to,
-                "typing", String.valueOf(isTyping),
-                "ts", String.valueOf(System.currentTimeMillis())
-        );
+        TypingEvent event = new TypingEvent();
+        event.setFrom(from);
+        event.setTo(to);
+        event.setChannelId(channelId);
+        event.setTyping(isTyping);
+        event.setTs(System.currentTimeMillis());
 
         String channel = to == null ? "group:" + channelId + ":typing" : "direct:" +channelId + ":typing" ;
 
 
-        redisTemplate.convertAndSend(channel, objectMapper.writeValueAsString(payload) );
+        redisTemplate.convertAndSend(channel, event );
     }
 
 
