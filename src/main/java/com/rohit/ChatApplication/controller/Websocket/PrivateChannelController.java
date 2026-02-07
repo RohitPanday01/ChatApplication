@@ -46,7 +46,6 @@ public class PrivateChannelController {
 
     private DirectMessageProducer directMessageProducer;
 
-
     @Autowired
     public PrivateChannelController(
             RedisTemplate<String, Object> redisTemplate,

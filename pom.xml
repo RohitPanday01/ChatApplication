@@ -11,7 +11,8 @@
 	<groupId>com.rohit</groupId>
 	<artifactId>ChatApplication</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>ChatApplication</name>
+    <packaging>pom</packaging>
+    <name>ChatApplication</name>
 	<description>ChatApplication</description>
 	<url/>
 	<licenses>
@@ -20,7 +21,7 @@
 	<developers>
 		<developer/>
 	</developers>
-	<scm>
+    <scm>
 		<connection/>
 		<developerConnection/>
 		<tag/>

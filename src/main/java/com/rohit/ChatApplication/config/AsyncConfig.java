@@ -33,11 +33,26 @@ public class AsyncConfig {
         return executor;
     }
 
+    @Bean(name = "rateLimiterTaskExecutor")
+    public Executor rateLimiterTaskConfig(){
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(500);
+        executor.setThreadNamePrefix("RateLimiter-Async-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        executor.initialize();
+        return executor;
+
+
+    }
+
     @Bean
     public ThreadPoolExecutor groupWorkerPool() {
         return new ThreadPoolExecutor(
-                20,                          // core threads
-                100,                         // max threads
+                6,                          // core threads
+                10,                         // max threads
                 60,                          // idle thread keep-alive (seconds)
                 java.util.concurrent.TimeUnit.SECONDS,
                 new java.util.concurrent.LinkedBlockingQueue<>(10000), // large queue

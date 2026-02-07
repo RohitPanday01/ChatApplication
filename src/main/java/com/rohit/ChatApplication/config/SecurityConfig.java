@@ -26,10 +26,10 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 public class SecurityConfig {
 
     private final UsersDetailsServiceImpl usersDetailsServiceImpl;
-    private final JWTAuthFilter jwtAuthFilter;
+    private final com.rohit.ChatApplication.config.JWTAuthFilter jwtAuthFilter;
 
     public SecurityConfig(UsersDetailsServiceImpl usersDetailsServiceImpl,
-                          JWTAuthFilter jwtAuthFilter) {
+                          com.rohit.ChatApplication.config.JWTAuthFilter jwtAuthFilter) {
         this.usersDetailsServiceImpl = usersDetailsServiceImpl;
         this.jwtAuthFilter = jwtAuthFilter;
     }
@@ -69,7 +69,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(UsersDetailsServiceImpl usersDetailsServiceImpl, PasswordEncoder passwordEncoder){
-        ChatAppUsernamePwdAuthenticationProvider authenticationProvider =  new ChatAppUsernamePwdAuthenticationProvider(usersDetailsServiceImpl,passwordEncoder );
+        com.rohit.ChatApplication.config.ChatAppUsernamePwdAuthenticationProvider authenticationProvider =  new ChatAppUsernamePwdAuthenticationProvider(usersDetailsServiceImpl,passwordEncoder );
         ProviderManager providerManager = new ProviderManager(authenticationProvider);
         providerManager.setEraseCredentialsAfterAuthentication(false);
         return providerManager;

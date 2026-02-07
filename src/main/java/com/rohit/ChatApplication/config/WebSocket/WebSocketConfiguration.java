@@ -36,8 +36,7 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
 
         registry
                 .addHandler(presenceWSHandler ,"/ws/chat")
-                .addInterceptors(jwtCookieHandshakeInterceptor)
-                .setAllowedOrigins("*");
+                .addInterceptors(jwtCookieHandshakeInterceptor).setAllowedOrigins("*");
     }
 
 
