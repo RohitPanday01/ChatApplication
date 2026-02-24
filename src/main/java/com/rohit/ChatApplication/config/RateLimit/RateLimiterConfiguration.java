@@ -19,8 +19,8 @@ public class RateLimiterConfiguration {
     private long cleanupIntervalMs = 60000;
     private RateLimitAlgorithm algorithm = RateLimitAlgorithm.TOKEN_BUCKET;
 
-    private Map<String, KeyConfig > keys = new HashMap<>();
-    private Map<String, KeyConfig> patterns = new HashMap<>();
+    private Map<String, KeyConfig > keys ;
+    private Map<String, KeyConfig> patterns ;
 
 
     @Getter

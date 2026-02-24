@@ -5,10 +5,12 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 
+
 import java.util.Collections;
 import java.util.List;
 
-public class RedisTokenBucket implements com.rohit.ChatApplication.service.RateLimit.RateLimiter {
+
+public class RedisTokenBucket implements RateLimiter {
 
     private final String key;
     private final int rate;

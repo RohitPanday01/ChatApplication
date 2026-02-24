@@ -136,7 +136,6 @@ public class ScheduleManagerService {
 
         RateLimitConfig exactMatch = this.activeConfigs.get(Key);
         if(exactMatch != null) return exactMatch;
-
         for(Map.Entry<String, RateLimitConfig> configEntry : activeConfigs.entrySet()){
             String pattern = configEntry.getKey();
 

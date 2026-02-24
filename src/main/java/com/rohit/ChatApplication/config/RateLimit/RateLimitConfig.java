@@ -2,7 +2,7 @@ package com.rohit.ChatApplication.config.RateLimit;
 
 import com.rohit.ChatApplication.service.RateLimit.RateLimitAlgorithm;
 
-import java.com.rohit.ChatApplication.service.RateLimit.RateLimitAlgorithm;
+
 
 public class RateLimitConfig {
     private final int capacity;
