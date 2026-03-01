@@ -50,7 +50,7 @@ public class DirectMessageProducer {
                     operations.send(persistenceTopic, keyForPersistence, dm);
                     return CompletableFuture.completedFuture(null);
                 })
-                .thenRun(() -> readReceiptProducer.sendReadReceipt(
+                .thenCompose((v) -> readReceiptProducer.sendReadReceipt(
                         dm.getId().toString(),
                         dm.getChannel().toString(),
                         dm.getFrom().getUsername(),

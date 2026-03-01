@@ -33,6 +33,19 @@ public class AsyncConfig {
         return executor;
     }
 
+    @Bean(name = "dmDeliveryExecutor")
+    public Executor dmDeliveryExecutor(){
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(1000);
+        executor.setThreadNamePrefix("dmDelivery-");
+        executor.setRejectedExecutionHandler(
+                new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor;
+    }
+
     @Bean
     public ThreadPoolExecutor groupWorkerPool() {
         return new ThreadPoolExecutor(
