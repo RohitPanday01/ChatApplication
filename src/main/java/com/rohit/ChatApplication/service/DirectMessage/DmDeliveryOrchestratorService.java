@@ -30,14 +30,15 @@ public class DmDeliveryOrchestratorService {
 
     public void process(PrivateMessageDto messageDto , Acknowledgment ack){
 
-        CompletableFuture.runAsync(()-> deliveryBusinessLogic.handle(messageDto) ,executor)
-                .thenRun(ack::acknowledge)
-                .exceptionally(ex -> {
-                    log.error("Delivery failed for message {}",
-                            messageDto.getId(), ex);
-                    // do NOT ack → Kafka retry
-                    return null;
-                });
+//        CompletableFuture.runAsync(()-> deliveryBusinessLogic.handle(messageDto) ,executor)
+//                .thenRun(ack::acknowledge)
+//                .exceptionally(ex -> {
+//                    log.error("Delivery failed for message {}",
+//                            messageDto.getId(), ex);
+//                    // do NOT ack → Kafka retry
+//                    return null;
+//                });
+        return;
 
     }
 

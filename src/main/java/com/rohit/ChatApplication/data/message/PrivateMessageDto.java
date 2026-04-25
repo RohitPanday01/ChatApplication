@@ -13,13 +13,14 @@ import java.util.UUID;
 
 
 @NoArgsConstructor
-@Jacksonized
 @Data
 public class PrivateMessageDto   {
 
     protected UUID id;
 
     protected UUID channel;
+
+    protected  long message_seq;
 
     protected MessageType messageType;
 
@@ -34,6 +35,7 @@ public class PrivateMessageDto   {
 
     public PrivateMessageDto (PrivateMessage message){
         this.id  = message.getMessageId();
+        this.message_seq = message.getMessageSeq();
         this.channel = message.getPrivateChannel().getPrivateChannelId();
         this.messageType = message.getMessageType();
         this.from = UserPublicProfile.builder()

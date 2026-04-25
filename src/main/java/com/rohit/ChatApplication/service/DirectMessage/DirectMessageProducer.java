@@ -2,8 +2,10 @@ package com.rohit.ChatApplication.service.DirectMessage;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rohit.ChatApplication.data.ReadReceipt;
 import com.rohit.ChatApplication.data.ReceiptType;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
+import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptEmitService;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,72 +21,40 @@ public class DirectMessageProducer {
 
     private final  String deliveryTopic;
     private final String persistenceTopic;
-    private final ReadReceiptProducer  readReceiptProducer;
+    private final ReadReceiptProducer readReceiptProducer;
 
     private final KafkaTemplate<String, Object> transactionalKafkaTemplate;
+
+    private final ReadReceiptEmitService receiptEmitService;
 
     public DirectMessageProducer(@Value("${chat.topics.dm-delivery}")String deliveryTopic ,
                                  @Value("${chat.topics.dm-persist}")String persistenceTopic ,
                                  @Qualifier("transactionalKafkaTemplate") KafkaTemplate<String, Object> transactionalKafkaTemplate,
-                                 ReadReceiptProducer readReceiptProducer){
+                                 ReadReceiptProducer readReceiptProducer,
+                                 ReadReceiptEmitService readReceiptEmitService){
         this.deliveryTopic = deliveryTopic ;
         this.persistenceTopic = persistenceTopic ;
         this.readReceiptProducer = readReceiptProducer;
         this.transactionalKafkaTemplate = transactionalKafkaTemplate;
+        this.receiptEmitService = readReceiptEmitService;
 
     }
 
-    public CompletableFuture<Void> sendDirectMessage(PrivateMessageDto dm ){
+    public void sendDirectMessage(PrivateMessageDto dm ){
         String keyForDelivery = dm.getTo().getId();
         String keyForPersistence = dm.getChannel().toString();
 
 
-//        template.executeInTransaction(operations -> {
-//            operations.send(deliveryTopic, keyForDelivery, dm);
-//            operations.send(persistenceTopic, keyForPersistence, dm);
-//            return true;
-//        });
-
-        return transactionalKafkaTemplate.executeInTransaction(operations -> {
+        transactionalKafkaTemplate.executeInTransaction(operations -> {
                     operations.send(deliveryTopic, keyForDelivery, dm);
                     operations.send(persistenceTopic, keyForPersistence, dm);
-                    return CompletableFuture.completedFuture(null);
-                })
-                .thenCompose((v) -> readReceiptProducer.sendReadReceipt(
-                        dm.getId().toString(),
-                        dm.getChannel().toString(),
-                        dm.getFrom().getUsername(),
-                        dm.getTo().getUsername(),
-                        ReceiptType.SENT,
-                        Instant.now()
-                ));
+                    return null;
+                });
+        ReadReceipt sentEvent = receiptEmitService.emitSentReceipt(dm);
 
-//        CompletableFuture<Void> realTime = template.send(deliveryTopic, keyForDelivery, dm)
-//                .thenAccept((result)-> {
+         readReceiptProducer.sendReadReceipt(sentEvent);
+
 //
-//                    readReceiptProducer.sendReadReceipt(dm.getId().toString() ,dm.getChannel().toString(),
-//                            dm.getFrom().getUsername(), dm.getTo().getUsername(), ReceiptType.SENT,
-//                            Instant.now());
-//
-//                })
-//                .exceptionally(ex -> {
-//
-//                    readReceiptProducer.sendReadReceipt(dm.getId().toString() ,dm.getChannel().toString(),
-//                            dm.getFrom().getUsername(), dm.getTo().getUsername(), ReceiptType.SENT,
-//                            Instant.now());
-//
-//                    throw new CompletionException(ex);
-//                });
-//
-//
-//
-//        CompletableFuture<Void> persistence = template.send(persistenceTopic ,keyForPersistence ,dm )
-//                .thenAccept((result)->{
-//
-//        }).exceptionally(ex -> {throw new CompletionException(ex);});
-//
-//
-//        return CompletableFuture.allOf(realTime ,persistence);
     }
 
 

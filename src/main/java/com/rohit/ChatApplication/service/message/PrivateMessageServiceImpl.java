@@ -11,6 +11,7 @@ import com.rohit.ChatApplication.exception.InvalidOperation;
 import com.rohit.ChatApplication.exception.UserDoesNotExist;
 import com.rohit.ChatApplication.repository.channel.PrivateChannelRepository;
 import com.rohit.ChatApplication.repository.message.PrivateMessageRepository;
+import com.rohit.ChatApplication.service.MessageSequencing.SnowFlakeIdGenerator;
 import com.rohit.ChatApplication.service.UsersDetailsServiceImpl;
 import com.rohit.ChatApplication.service.channel.PrivateChannelServiceImpl;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
@@ -33,16 +34,19 @@ public class PrivateMessageServiceImpl{
     private final UsersDetailsServiceImpl usersDetailsService;
     private final PrivateMessageRepository privateMessageRepository;
     private final PrivateChannelRepository privateChannelRepository;
+    private final SnowFlakeIdGenerator snowFlakeIdGenerator;
 
 
     public PrivateMessageServiceImpl(
             UsersDetailsServiceImpl usersDetailsService,
             PrivateChannelRepository privateChannelRepository,
-            PrivateMessageRepository privateMessageRepository) {
+            PrivateMessageRepository privateMessageRepository ,
+            SnowFlakeIdGenerator snowFlakeIdGenerator) {
 
         this.usersDetailsService = usersDetailsService;
         this.privateMessageRepository = privateMessageRepository;
         this.privateChannelRepository = privateChannelRepository;
+        this.snowFlakeIdGenerator = snowFlakeIdGenerator;
 
     }
 
@@ -69,7 +73,8 @@ public class PrivateMessageServiceImpl{
                     from,
                     to,
                     messageDto.getMessageType(),
-                    messageDto.getContent()
+                    messageDto.getContent(),
+                    messageDto.getMessage_seq()
             );
 
             return Optional.of(message);
@@ -95,7 +100,8 @@ public class PrivateMessageServiceImpl{
             User user = usersDetailsService.getUserById(fromUserId);
 
             PrivateChannel privateChannel = getChannelById(channelUUID);
-            PrivateMessage privateMessage = privateChannel.addMessage(user,messageType, Content);
+            long messageSeq = snowFlakeIdGenerator.generateId();
+            PrivateMessage privateMessage = privateChannel.addMessage(user,messageType, Content , messageSeq);
 
 //            privateChannelRepository.saveAndFlush(privateChannel);
             return new PrivateMessageDto(privateMessage);

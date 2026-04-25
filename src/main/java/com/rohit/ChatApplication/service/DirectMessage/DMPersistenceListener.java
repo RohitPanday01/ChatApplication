@@ -6,6 +6,7 @@ import com.rohit.ChatApplication.data.message.PrivateMessageDto;
 import com.rohit.ChatApplication.entity.PrivateMessage;
 import com.rohit.ChatApplication.repository.message.PrivateMessageRepository;
 import com.rohit.ChatApplication.service.GroupMessage.FanOutService;
+import com.rohit.ChatApplication.service.MessageSequencing.SequenceService;
 import com.rohit.ChatApplication.service.message.PrivateMessageServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +18,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -29,11 +28,16 @@ public class DMPersistenceListener {
     private final PrivateMessageRepository privateMessageRepository;
     private final PrivateMessageServiceImpl privateMessageService;
     private final PrivateMessageBatcher batcher;
+    private final SequenceService sequenceService;
 
-    public DMPersistenceListener(PrivateMessageRepository privateMessageRepository, PrivateMessageServiceImpl privateMessageService, PrivateMessageBatcher batcher) {
+    public DMPersistenceListener(PrivateMessageRepository privateMessageRepository,
+                                 PrivateMessageServiceImpl privateMessageService,
+                                 PrivateMessageBatcher batcher,
+                                 SequenceService sequenceService) {
         this.privateMessageRepository = privateMessageRepository;
         this.privateMessageService = privateMessageService;
         this.batcher = batcher;
+        this.sequenceService = sequenceService;
     }
 
     @KafkaListener(
@@ -45,20 +49,27 @@ public class DMPersistenceListener {
 
         try{
 
-           // List<PrivateMessage> entities = messages.stream() .map(privateMessageService::toEntity) .flatMap(Optional::stream) .toList();
+            List<PrivateMessage> batches = new ArrayList<>();
+            for(PrivateMessageDto messageDto : messages){
 
-            List<PrivateMessage> entities = messages.stream()
-                    .map(privateMessageService::toEntity)
-                    .flatMap(Optional::stream)
-                    .toList();
+               Optional<PrivateMessage> message =
+                       privateMessageService.toEntity(messageDto);
 
-            log.info("Persisting: {}", entities);
-            batcher.addMessages(entities);
+               message.ifPresent(batches::add);
+
+
+            }
+
+            if (!batches.isEmpty()) {
+                privateMessageRepository.saveAll(batches);
+            }
 
             ack.acknowledge();
 
         }catch(Exception exception){
-            log.error("Failed to buffer messages, Kafka will retry", exception);
+            log.error("Batch persistence failed. Triggering Kafka retry.", exception);
+
+            throw exception;
         }
     }
 

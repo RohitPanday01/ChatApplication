@@ -152,7 +152,7 @@ public class PrivateChannelController {
 
         try {
             // synchronous send (waits until producer sends)
-            directMessageProducer.sendDirectMessage(privateMessageDto).join();
+            directMessageProducer.sendDirectMessage(privateMessageDto);
             return ResponseEntity.ok("Message Sent");
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -163,5 +163,7 @@ public class PrivateChannelController {
 //        return ResponseEntity.accepted().body("Message sending...");
 
     }
+
+    
 
 }

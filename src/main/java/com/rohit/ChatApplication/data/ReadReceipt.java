@@ -10,6 +10,7 @@ import java.time.Instant;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReadReceipt {
+    private String eventId;
     private String messageId;
     private String channelId;
     private String sender;

@@ -24,7 +24,8 @@ public class PrivateMessageBatcher {
     private final PrivateMessageRepository  messageRepository;
     private final PrivateChannelRepository privateChannelRepository;
 
-    private final  ConcurrentLinkedQueue<PrivateMessage> buffer = new ConcurrentLinkedQueue<>();
+    private final  ConcurrentLinkedQueue<PrivateMessage> buffer =
+            new ConcurrentLinkedQueue<>();
 
     private static final int BATCH_SIZE = 1;
 
@@ -62,7 +63,8 @@ public class PrivateMessageBatcher {
 
         try{
             List<PrivateMessage> toSave = batch.stream()
-                    .filter(message -> !messageRepository.existsByMessageId(message.getMessageId()))
+                    .filter(message ->
+                            !messageRepository.existsByMessageId(message.getMessageId()))
                     .toList();
             log.info("saving message to db: {}", toSave.size());
             if (!toSave.isEmpty()) {

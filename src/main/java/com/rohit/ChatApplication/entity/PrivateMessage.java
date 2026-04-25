@@ -40,6 +40,9 @@ public class PrivateMessage extends  TimeStampBase{
     @Column(length = 32, nullable = false)
     private MessageType messageType;
 
+    @Column(name = "message_seq", nullable = false)
+    private Long messageSeq;
+
     private Instant sentAt;
 
     private Instant seenAt;
@@ -54,7 +57,8 @@ public class PrivateMessage extends  TimeStampBase{
 
 
 
-    public PrivateMessage(UUID messageId ,PrivateChannel privateChannel , User from , User to ,MessageType messageType, String content ){
+    public PrivateMessage(UUID messageId ,PrivateChannel privateChannel , User from , User to ,
+                          MessageType messageType, String content ,long messageSeq ){
         if(Objects.equals(from, to)){
             throw new IllegalArgumentException("From cannot Be Same as to ");
         }
@@ -64,7 +68,7 @@ public class PrivateMessage extends  TimeStampBase{
         this.to = to;
         this.messageType = messageType;
         this.content =  content;
-        this.sentAt = Instant.now();
+        this.messageSeq = messageSeq;
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.rohit.ChatApplication.service.Notification;
 import com.rohit.ChatApplication.data.NotificationEvent;
 import com.rohit.ChatApplication.data.ReadReceipt;
 import com.rohit.ChatApplication.data.ReceiptType;
+import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptEmitService;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class NotificationConsumer {
     private final ReadReceiptProducer readReceiptProducer;
     private  static final String DEDUP_KEY_PREFIX = "notification:processed:";
     private static final Duration DEDUP_TTL = Duration.ofDays(1);
+    private final ReadReceiptEmitService readReceiptEmitService;
 
     @KafkaListener(
             topics = "${chat.topics.dm-notify}",
@@ -49,22 +51,11 @@ public class NotificationConsumer {
                 return;
             }
 
+
+
             CompletableFuture<Void> work = dispatch(event).thenCompose((v)->
                     readReceiptProducer.sendReadReceipt(event.getMessageId() ,event.getChannelId() , event.getFromUser(),
-                            event.getToUser(), ReceiptType.DELIVERED , Instant.now() ))
-                    .whenComplete((v,ex)->{
-                        if(ex != null){
-                            ack.acknowledge();
-                        }else{
-                            try {
-                                redisTemplate.delete(dedupKey);
-                            } catch (Exception e) {
-                                log.error("Failed deleting dedup key after failure", e);
-                            }
-                            // do not ack -> Kafka will retry or error handler will move to DLT
-                            log.error("Dispatch failed for notification {}, will retry", event.getEventId(), ex);
-                        }
-                    });
+                            event.getToUser(), ReceiptType.DELIVERED , Instant.now() ));
         } catch (Exception e) {
             try {
                 redisTemplate.delete(dedupKey);

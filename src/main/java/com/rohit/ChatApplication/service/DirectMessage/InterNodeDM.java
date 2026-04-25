@@ -2,12 +2,14 @@ package com.rohit.ChatApplication.service.DirectMessage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rohit.ChatApplication.data.NotificationType;
+import com.rohit.ChatApplication.data.ReadReceipt;
 import com.rohit.ChatApplication.data.ReceiptType;
 import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
 import com.rohit.ChatApplication.service.Notification.NotificationProducer;
 
 
+import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptEmitService;
 import com.rohit.ChatApplication.service.RegisterUserSession;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
 import lombok.extern.slf4j.Slf4j;
@@ -41,12 +43,14 @@ public class InterNodeDM {
     private  final NodeIdentity nodeIdentity;
 
     private final NotificationProducer notificationProducer;
+    private final ReadReceiptEmitService readReceiptEmitService ;
 
     public InterNodeDM(RedisTemplate<String , Object> redisTemplate,
                        KafkaTemplate<String, Object > kafkaTemplate,
                        RegisterUserSession registerUserSession,
                        ObjectMapper objectMapper,ReadReceiptProducer readReceiptProducer,
-                       NotificationProducer notificationProducer, NodeIdentity nodeIdentity){
+                       NotificationProducer notificationProducer, NodeIdentity nodeIdentity,
+                       ReadReceiptEmitService readReceiptEmitService){
         this.redisTemplate = redisTemplate ;
         this.kafkaTemplate = kafkaTemplate;
         this.registerUserSession = registerUserSession;
@@ -54,6 +58,7 @@ public class InterNodeDM {
         this.objectMapper = objectMapper;
         this.notificationProducer = notificationProducer;
         this.nodeIdentity = nodeIdentity;
+        this.readReceiptEmitService = readReceiptEmitService;
 
     }
     @KafkaListener(
@@ -98,17 +103,9 @@ public class InterNodeDM {
                         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(messageDto)));
                     }
 
-                    readReceiptProducer.sendReadReceipt(messageDto.getId().toString() ,messageDto.getChannel().toString(),
-                                    messageDto.getFrom().getUsername(), messageDto.getTo().getUsername(), ReceiptType.DELIVERED,
-                                    Instant.now())
-                            .whenComplete((v, ex) -> {
-                                if (ex == null) {
-                                    ack.acknowledge(); // only ack after success
-                                } else {
-                                    log.error("ReadReceipt failed , Kafka will retry {}", messageDto.getId(), ex);
+                    ReadReceipt event = readReceiptEmitService.emitDeliveredReceipt(messageDto);
 
-                                }
-                            });
+                    readReceiptProducer.sendReadReceipt(event);
                 }
             }else{
                 // send to Notification Topic

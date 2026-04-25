@@ -10,6 +10,8 @@ import java.net.InetAddress;
 @Data
 public class NodeIdentity {
     private final String nodeId;
+    private final long machineId;
+
 
     public NodeIdentity(@Value("${node.id:#{null}}") String nodeIdConfig) {
         if (nodeIdConfig != null && !nodeIdConfig.isBlank()) {
@@ -21,9 +23,16 @@ public class NodeIdentity {
                 throw new IllegalStateException("Unable to determine node identity", e);
             }
         }
+        this.machineId =  Math.abs(nodeId.hashCode()) % 32;
     }
+
+
 
     public String getNodeId() {
         return nodeId;
+    }
+
+    public long getMachineId() {
+        return machineId;
     }
 }
