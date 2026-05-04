@@ -34,7 +34,7 @@ build/
 .vscode/
 
 # Environment variables
-.env
+Deployment/local/.env
 application.properties
 application.yml
 secrets.yml
