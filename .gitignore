@@ -35,6 +35,9 @@ build/
 
 # Environment variables
 Deployment/local/.env
+Deployment/prod/app/.env
+Deployment/prod/kafka/.env
+.env
 application.properties
 application.yml
 secrets.yml
