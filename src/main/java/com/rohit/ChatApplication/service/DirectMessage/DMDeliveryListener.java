@@ -8,6 +8,7 @@ import com.rohit.ChatApplication.data.ReadReceipt;
 import com.rohit.ChatApplication.data.ReceiptType;
 import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
+import com.rohit.ChatApplication.observability.metrics.ChatMetrics;
 import com.rohit.ChatApplication.service.Notification.NotificationProducer;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
 import com.rohit.ChatApplication.service.RegisterUserSession;
@@ -44,6 +45,7 @@ public class DMDeliveryListener {
     private final ObjectMapper objectMapper;
     private final ReadReceiptProducer readReceiptProducer;
     private final NodeIdentity nodeIdentity;
+    private final ChatMetrics chatMetrics;
 
 
     private final NotificationProducer notificationProducer;
@@ -53,7 +55,8 @@ public class DMDeliveryListener {
                               RegisterUserSession registerUserSession,
                               ObjectMapper objectMapper,
                               NotificationProducer notificationProducer,
-                              ReadReceiptProducer readReceiptProducer,NodeIdentity nodeIdentity){
+                              ReadReceiptProducer readReceiptProducer,NodeIdentity nodeIdentity,
+                              ChatMetrics chatMetrics){
         this.redisTemplate = redisTemplate ;
         this.kafkaTemplate = kafkaTemplate;
         this.registerUserSession = registerUserSession;
@@ -61,6 +64,7 @@ public class DMDeliveryListener {
         this.notificationProducer = notificationProducer;
         this.readReceiptProducer = readReceiptProducer;
         this.nodeIdentity = nodeIdentity;
+        this.chatMetrics = chatMetrics;
     }
 
 
@@ -105,8 +109,6 @@ public class DMDeliveryListener {
 
                     if(session!= null && session.isOpen()){
 
-
-
                         long added = redisTemplate.opsForSet().add(dedupKey,messageDto.getId().toString());
                         log.info("---->>>>>>>>>added dedupe info in DM delivery Listerner {} ", added);
 
@@ -114,6 +116,7 @@ public class DMDeliveryListener {
 
                         if(added > 0 ){
                             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(messageDto)));
+                            chatMetrics.recordE2EDelivery(messageDto.getIngressTimestampNanos());
                             log.info("---->>>>>>>>>message sent to {} ", receiverName);
                         }
 

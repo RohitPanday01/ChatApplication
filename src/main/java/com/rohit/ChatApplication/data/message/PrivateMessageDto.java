@@ -28,8 +28,8 @@ public class PrivateMessageDto   {
     protected UserPublicProfile to;
 
     protected  String content;
-
     protected  String sentAt;
+    private long ingressTimestampNanos;
 
 
     public PrivateMessageDto (PrivateMessage message){
