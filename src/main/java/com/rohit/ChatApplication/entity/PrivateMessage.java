@@ -1,10 +1,7 @@
 package com.rohit.ChatApplication.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.BatchSize;
 
 import java.time.Instant;
@@ -12,7 +9,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @BatchSize(size = 128)
 @Table(name = "private_message")
@@ -43,6 +41,8 @@ public class PrivateMessage extends  TimeStampBase{
     @Column(name = "message_seq", nullable = false)
     private Long messageSeq;
 
+
+    @Column(name = "sent_at", nullable = false)
     private Instant sentAt;
 
     private Instant seenAt;

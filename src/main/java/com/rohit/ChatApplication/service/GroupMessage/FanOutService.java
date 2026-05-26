@@ -5,7 +5,6 @@ import com.rohit.ChatApplication.data.message.GroupMessageDto;
 import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.service.RegisterUserSession;
 import com.rohit.ChatApplication.service.channel.GroupChannelServiceImpl;
-import jakarta.persistence.SecondaryTable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,7 +19,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletionException;
 
 @Service
 public class FanOutService {

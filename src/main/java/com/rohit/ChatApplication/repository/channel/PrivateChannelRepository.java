@@ -1,6 +1,7 @@
 package com.rohit.ChatApplication.repository.channel;
 
 import com.rohit.ChatApplication.data.SliceList;
+import com.rohit.ChatApplication.data.channel.profile.PrivateChannelProfile;
 import com.rohit.ChatApplication.entity.PrivateChannel;
 import com.rohit.ChatApplication.entity.User;
 import org.springframework.data.domain.Pageable;
@@ -22,15 +23,19 @@ public interface PrivateChannelRepository extends JpaRepository<PrivateChannel ,
 
 
     @Query("""
-    SELECT pc FROM PrivateChannel pc
-    WHERE pc.user1.id = :userId OR pc.user2.id = :userId
-    ORDER BY pc.updatedAt DESC
+        SELECT pc FROM PrivateChannel pc
+        JOIN FETCH pc.user1 u1
+        JOIN FETCH pc.user2 u2
+        WHERE u1.userId = :userId OR u2.userId = :userId
+        ORDER BY pc.updatedAt DESC
     """)
     Slice<PrivateChannel> findByUserIdOrderByUpdateAtDesc(@Param("userId") UUID userId , Pageable pageable);
 
     @Query("""
-    SELECT pc FROM PrivateChannel pc
-    WHERE pc.user1.id = :userId OR pc.user2.id = :userId
+        SELECT pc FROM PrivateChannel pc
+        JOIN FETCH pc.user1 u1
+        JOIN FETCH pc.user2 u2
+        WHERE u1.userId = :userId OR u2.userId = :userId
     """)
     List<PrivateChannel> findAllChannelForUser(@Param("userId") UUID userId);
 
@@ -46,9 +51,11 @@ public interface PrivateChannelRepository extends JpaRepository<PrivateChannel ,
     Set<String> findUsersWhoCare(@Param("username") String username);
 
     @Query("""
-    SELECT pc FROM PrivateChannel pc
-    WHERE pc.user1.id = :userId1 AND pc.user2.id = :userId2
-""")
+        SELECT pc FROM PrivateChannel pc
+        JOIN FETCH pc.user1
+        JOIN FETCH pc.user2
+        WHERE pc.user1.userId = :userId1 AND pc.user2.userId = :userId2
+    """)
     Optional<PrivateChannel> findChannelBetweenUsers(@Param("userId1") UUID userId1,
                                                      @Param("userId2") UUID userId2);
 

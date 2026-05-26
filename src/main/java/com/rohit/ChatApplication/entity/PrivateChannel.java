@@ -19,6 +19,16 @@ import java.util.UUID;
 @Setter
 @BatchSize(size = 64)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(
+        name = "private_channels",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uq_private_channel_users", columnNames = {"user1_id", "user2_id"})
+        },
+        indexes = {
+                @Index(name = "idx_private_channels_user1", columnList = "user1_id"),
+                @Index(name = "idx_private_channels_user2", columnList = "user2_id")
+        }
+)
 public class PrivateChannel extends TimeStampBase{
 
     @Id
@@ -36,13 +46,9 @@ public class PrivateChannel extends TimeStampBase{
     @OneToMany( mappedBy = "privateChannel",cascade = CascadeType.ALL, orphanRemoval = true )
     private List<PrivateMessage> messages;
 
-    @OneToOne
-    @JoinColumn(name = "last_message_id")
-    private PrivateMessage lastMessage;
-
-
-//    // user1 blocked user user2 in 0 indexed and user2 blocked user1 in 1 index
-//    private final boolean[] blockedUsers = new boolean[2];
+//    @OneToOne
+//    @JoinColumn(name = "last_message_id")
+//    private PrivateMessage lastMessage;
 
     @Column(nullable = false)
     private boolean user1BlockedUser2 = false;
@@ -51,9 +57,15 @@ public class PrivateChannel extends TimeStampBase{
     private boolean user2BlockedUser1 = false;
 
 
-    public PrivateChannel(User user1 ,User user2){
-        this.user1 = user1;
-        this.user2 = user2;
+    public PrivateChannel(User u1, User u2) {
+        // Deterministic Sorting: Ensures user1_id is ALWAYS less than user2_id
+        if (u1.getUserId().toString().compareTo(u2.getUserId().toString()) < 0) {
+            this.user1 = u1;
+            this.user2 = u2;
+        } else {
+            this.user1 = u2;
+            this.user2 = u1;
+        }
     }
 
     public  boolean isBlocked(){
@@ -99,7 +111,7 @@ public class PrivateChannel extends TimeStampBase{
         PrivateMessage message = new PrivateMessage(null ,this , messageSender , messageReceiver ,messageType, content
         ,messageSeq);
         messages.add(message);
-        lastMessage = message;
+//        lastMessage = message;
     }
 
     public PrivateMessage addMessage(User from ,MessageType messageType, String content, long messageSeq ) throws InvalidOperation{
@@ -112,7 +124,7 @@ public class PrivateChannel extends TimeStampBase{
                 messageType , content, messageSeq );
         
         messages.add(privateMessage);
-        lastMessage = privateMessage;
+//        lastMessage = privateMessage;
 
         return privateMessage;
     }
@@ -136,7 +148,6 @@ public class PrivateChannel extends TimeStampBase{
                 ", user1=" + user1 +
                 ", user2=" + user2 +
                 ", messages=" + messages +
-                ", lastMessage=" + lastMessage +
                 ", user1BlockedUser2=" + user1BlockedUser2 +
                 ", user2BlockedUser1=" + user2BlockedUser1 +
                 '}';

@@ -52,7 +52,6 @@ public class NotificationConsumer {
             }
 
 
-
             CompletableFuture<Void> work = dispatch(event).thenCompose((v)->
                     readReceiptProducer.sendReadReceipt(event.getMessageId() ,event.getChannelId() , event.getFromUser(),
                             event.getToUser(), ReceiptType.DELIVERED , Instant.now() ));

@@ -22,7 +22,7 @@ import java.util.UUID;
 public class User {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "user_id",columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID userId;
 
@@ -37,12 +37,6 @@ public class User {
 
     @Column(name ="full_name", nullable = false,length = 50)
     private String FullName;
-
-//    @OneToMany(mappedBy = "user1")
-//    private Set<PrivateChannel> initiatedChannels = new HashSet<>();
-//
-//    @OneToMany(mappedBy = "user2")
-//    private Set<PrivateChannel> receivedChannels = new HashSet<>();
 
     @Transient
     private Set<PrivateChannel> privateChannels = new HashSet<>();
@@ -70,17 +64,6 @@ public class User {
         this.email = email;
         this.password = password;
     }
-
-//    @PrePersist
-//    protected void OnCreate(){
-//        this.createdAt = LocalDateTime.now();
-//        this.updatedAt = LocalDateTime.now();
-//    }
-//
-//    @PreUpdate
-//    protected void OnUpdate(){
-//        this.updatedAt = LocalDateTime.now();
-//    }
 
 
     @Override

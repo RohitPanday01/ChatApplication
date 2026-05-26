@@ -38,3 +38,6 @@ build/
 application.properties
 application.yml
 secrets.yml
+
+# Python Virtual Environment Sandbox
+.venv/

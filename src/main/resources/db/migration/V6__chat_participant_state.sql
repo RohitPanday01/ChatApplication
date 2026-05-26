@@ -1,4 +1,8 @@
+
+BEGIN;
+
 CREATE TABLE chat_participant_state (
+
     user_id UUID NOT NULL,
     private_channel_id UUID NOT NULL,
 
@@ -9,3 +13,8 @@ CREATE TABLE chat_participant_state (
 
     PRIMARY KEY (user_id, private_channel_id)
 );
+
+CREATE INDEX idx_chat_part_state_user_id ON chat_participant_state (user_id);
+
+
+COMMIT;

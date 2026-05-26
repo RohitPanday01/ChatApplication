@@ -35,16 +35,16 @@ public class LastSeenWriter implements ItemWriter<UserLastSeen> {
            Optional<User> optionalUser = userRepo.findByUsername(item.getUsername());
 
            optionalUser.ifPresent((user)->{
-               user.setLastSeen(item.getLastSeen());
-               toUpdate.add(user);
+//               user.setLastSeen(item.getLastSeen());
+//               toUpdate.add(user);
            });
 
        }
 
-        if (!toUpdate.isEmpty()) {
-            userRepo.saveAll(toUpdate);
-            log.info("->>>>> Saved {} users with updated lastSeen", toUpdate.size());
-        }
+//        if (!toUpdate.isEmpty()) {
+//            userRepo.saveAll(toUpdate);
+//            log.info("->>>>> Saved {} users with updated lastSeen", toUpdate.size());
+//        }
 
     }
 }

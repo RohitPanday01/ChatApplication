@@ -33,7 +33,6 @@ public class PrivateChannelProfile {
         this.members = Stream.of(channel.getUser1(), channel.getUser2())
                 .map(UserPublicProfile::new)
                 .collect(Collectors.toList());
-        this.lastMessage = new PrivateMessageDto(channel.getLastMessage());
         this.createAt = TimeUtil.formatInstant(channel.getCreateAt());
         this.updatedAt = TimeUtil.formatInstant(channel.getUpdatedAt());
         this.isBlocked = channel.isBlocked();
