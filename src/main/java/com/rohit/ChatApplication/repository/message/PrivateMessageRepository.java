@@ -16,24 +16,25 @@ public interface PrivateMessageRepository extends JpaRepository<PrivateMessage ,
 
     boolean existsByMessageId(UUID message_id);
 
-    @Query("""
-        SELECT pm
-        FROM PrivateMessage pm
-        WHERE pm.to.id = :userId OR pm.from.id = :userId
-        ORDER BY pm.createAt DESC
-    """)
-    Slice<PrivateMessage> getAllByUser(@Param("userId") UUID userId, Pageable pageable);
+//    @Query("""
+//        SELECT pm
+//        FROM PrivateMessage pm
+//        WHERE pm.to.id = :userId OR pm.from.id = :userId
+//        ORDER BY pm.createAt DESC
+//    """)
+//    Slice<PrivateMessage> getAllByUser(@Param("userId") UUID userId, Pageable pageable);
+
 
     @Query("""
         SELECT pm
         FROM PrivateMessage pm
         WHERE pm.privateChannel.id = :channelId
-        ORDER BY pm.createAt DESC
+        ORDER BY pm.message_seq DESC
     """)
     Slice<PrivateMessage> getAllByChannel(@Param("channelId") UUID channelId, Pageable pageable);
 
     @Query("""
-            SELECT MAX(messageSeq)
+            SELECT MAX(message_seq)
             FROM PrivateMessage pm
             WHERE pm.privateChannel.id = :channelId
             """)

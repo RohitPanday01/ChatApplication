@@ -45,9 +45,9 @@ public class PrivateMessage extends  TimeStampBase{
     @Column(name = "sent_at", nullable = false)
     private Instant sentAt;
 
-    private Instant seenAt;
-
-    private Instant deliveredAt;
+//    private Instant seenAt;
+//
+//    private Instant deliveredAt;
 
     @Enumerated(EnumType.STRING)
     private PrivateMessageStatus status;

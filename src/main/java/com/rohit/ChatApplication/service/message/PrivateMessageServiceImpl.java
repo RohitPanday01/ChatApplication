@@ -114,28 +114,28 @@ public class PrivateMessageServiceImpl{
 
 
 
-    public SliceList<PrivateMessageDto> getAllMessages(String userId,
-                                                       PageRequest pageRequest)throws UserDoesNotExist{
-        User user  = usersDetailsService.getUserById(userId);
-
-
-        Pageable pageable = PageRequest.of(pageRequest.getPageNumber(), pageRequest.getPageSize(),
-                Sort.by("createAt").descending() );
-
-        Slice<PrivateMessage> slice =
-                privateMessageRepository.getAllByUser(user.getUserId() , pageable);
-
-
-        Function<? super PrivateMessage, ?> PrivateMessageDto;
-        return new SliceList<>(
-                slice.getNumber(),
-                slice.getSize(),
-                slice.getContent().stream()
-                        .sorted(Comparator.comparing(PrivateMessage::getCreateAt))
-                        .map(PrivateMessageDto::new)
-                        .collect(Collectors.toList()),
-                slice.hasNext());
-    }
+//    public SliceList<PrivateMessageDto> getAllMessages(String userId,
+//                                                       PageRequest pageRequest)throws UserDoesNotExist{
+//        User user  = usersDetailsService.getUserById(userId);
+//
+//
+//        Pageable pageable = PageRequest.of(pageRequest.getPageNumber(), pageRequest.getPageSize(),
+//                Sort.by("createAt").descending() );
+//
+//        Slice<PrivateMessage> slice =
+//                privateMessageRepository.getAllByUser(user.getUserId() , pageable);
+//
+//
+//        Function<? super PrivateMessage, ?> PrivateMessageDto;
+//        return new SliceList<>(
+//                slice.getNumber(),
+//                slice.getSize(),
+//                slice.getContent().stream()
+//                        .sorted(Comparator.comparing(PrivateMessage::getCreateAt))
+//                        .map(PrivateMessageDto::new)
+//                        .collect(Collectors.toList()),
+//                slice.hasNext());
+//    }
 
 
     public SliceList<PrivateMessageDto> getAllMessages(
@@ -145,7 +145,7 @@ public class PrivateMessageServiceImpl{
         UUID channelUUID = UUID.fromString(channelId);
 
         Pageable pageable = PageRequest.of(pageRequest.getPageNumber(), pageRequest.getPageSize(),
-                Sort.by("createAt").descending() );
+                Sort.by("message_seq").descending() );
         User user = usersDetailsService.getUserById(userId);
         PrivateChannel channel = getChannelById(channelUUID);
         if (channel.getUser1() != user ||  channel.getUser2() != user )
