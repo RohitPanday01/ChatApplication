@@ -30,7 +30,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-
+import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 
 
 import java.time.Duration;
@@ -40,7 +40,6 @@ import java.util.concurrent.*;
 
 
 @Component
-
 public class PresenceWSHandler extends TextWebSocketHandler {
 
     private final Logger log = LoggerFactory.getLogger(PresenceWSHandler.class);
@@ -124,7 +123,6 @@ public class PresenceWSHandler extends TextWebSocketHandler {
            if(registerUserSession.getUserSessionsInTheirGroups(groupChannelProfile.getId()).size() == 1){
                subscriptionManager.subscribeGroup(groupChannelProfile.getId());
            }
-
        }
 
        redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
@@ -149,7 +147,6 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
             redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
             session.sendMessage(new TextMessage("pong"));
-
         }
     }
 
@@ -165,12 +162,10 @@ public class PresenceWSHandler extends TextWebSocketHandler {
         String sessionId = session.getId();
 
 
-
         if (username == null || userId == null) {
             log.warn("afterConnectionClosed called but username or userId is null, skipping cleanup");
             return;
         }
-
 
         try{
 
@@ -180,24 +175,21 @@ public class PresenceWSHandler extends TextWebSocketHandler {
                 subscriptionManager.unsubscribeUserChannels(userId);
             }
 
-
             redisTemplate.delete("nodeId:"+ username );
-
 
             for(GroupChannelProfile groupChannelProfile : groupChannelProfiles ){
 
-                Set<WebSocketSession> sessions = registerUserSession.unregisterUserSessionInTheirGroups(groupChannelProfile.getId() ,session);
+                Set<WebSocketSession> sessions =
+                        registerUserSession.unregisterUserSessionInTheirGroups(groupChannelProfile.getId() ,session);
 
                 if (sessions.isEmpty()) {
                     subscriptionManager.unsubscribeGroup(groupChannelProfile.getId() );
                 }
-
             }
 
         } catch (Exception e) {
             log.error("not able to user websocketSession remove from userSessions map ",  e);
         }
-
 
         autoStopTimer.entrySet().removeIf(e ->{
             if (e.getKey().contains(username)) {
@@ -207,11 +199,9 @@ public class PresenceWSHandler extends TextWebSocketHandler {
             return false;
         });
 
-
         presencePublisher.publish(username , "offline");
 
         redisTemplate.opsForZSet().remove("online_users_lastPing", username);
-
 
     }
 
@@ -227,8 +217,6 @@ public class PresenceWSHandler extends TextWebSocketHandler {
         boolean typing =  node.path("isTyping").asBoolean();
 
         if (typing) armAutoStop(channelId, username, to);
-
-
 
         typingEventPublisher.publishTypingEvent(username ,to,channelId,
                    typing);

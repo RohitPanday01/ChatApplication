@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+
+  kafka-broker:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka-node
+    network_mode: host
+    restart: always
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    environment:
+      # ----------- KRaft core -----------
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: ${NODE_ID}
+
+      KAFKA_CONTROLLER_QUORUM_VOTERS: ${QUORUM_VOTERS}
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # ----------- Listeners -----------
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${HOST_IP}:${KAFKA_PORT}
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+
+      # ----------- Storage -----------
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: '-Xmx1G -Xms1G'
+
+      # ----------- Replication -----------
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: ${REPLICATION_FACTOR}
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: ${REPLICATION_FACTOR}
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      # ----------- Required for KRaft -----------
+      KAFKA_CLUSTER_ID: ${CLUSTER_ID}
+
+volumes:
+  kafka-data:

@@ -147,7 +147,7 @@ public class PrivateChannelController {
         if (privateMessageDto == null) {
             throw new IllegalStateException("Failed to create message DTO");
         }
-
+        privateMessageDto.setIngressTimestampNanos(System.nanoTime());
 
 
         try {

@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+
+  chatapp:
+    image: your-dockerhub-username/chatapp:latest
+    container_name: chatapp
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
