@@ -17,7 +17,8 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PrivateMessage extends  TimeStampBase{
 
-    @Id
+
+
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "message_id")
     private UUID messageId;
@@ -87,7 +88,7 @@ public class PrivateMessage extends  TimeStampBase{
     public String toString() {
         return "PrivateMessage{" +
                 "from=" + from +
-                ", message_id=" + messageId +
+                ", messageId=" + messageId +
                 ", to=" + to +
                 ", messageType=" + messageType +
                 ", privateChannel=" + privateChannel +

@@ -64,7 +64,7 @@ public class PrivateMessageBatcher {
         try{
             List<PrivateMessage> toSave = batch.stream()
                     .filter(message ->
-                            !messageRepository.existsByMessageId(message.getMessageId()))
+                            !messageRepository.existByMessagesSeq(message.getMessageSeq()))
                     .toList();
             log.info("saving message to db: {}", toSave.size());
             if (!toSave.isEmpty()) {

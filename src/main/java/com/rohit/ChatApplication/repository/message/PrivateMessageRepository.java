@@ -16,6 +16,8 @@ public interface PrivateMessageRepository extends JpaRepository<PrivateMessage ,
 
     boolean existsByMessageId(UUID message_id);
 
+    boolean existByMessagesSeq(long messageSeq);
+
 //    @Query("""
 //        SELECT pm
 //        FROM PrivateMessage pm
