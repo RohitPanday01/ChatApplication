@@ -68,11 +68,14 @@ public class PrivateChannelServiceImpl {
         User userB = userService.getUserById(toUserId);
 
 
-        if (uuidA.compareTo(uuidB) > 0) {
-            User temp = userA;
-            userA = userB;
-            userB = temp;
-        }
+
+
+
+//        if (uuidA.compareTo(uuidB) > 0) {
+//            User temp = userA;
+//            userA = userB;
+//            userB = temp;
+//        }
 
         if (privateChannelRepository.isPrivateChannelExistsBetween(userA, userB)) {
             throw new ChannelDoesNotExist("Private channel between '%s' and '%s' already exists.");

@@ -65,7 +65,7 @@ public interface PrivateChannelRepository extends JpaRepository<PrivateChannel ,
         UUID id2 = user2.getUserId();
 
         // Enforce consistent order
-        if (id1.compareTo(id2) > 0) {
+        if (id1.toString().compareTo(id2.toString()) > 0) {
             UUID temp = id1;
             id1 = id2;
             id2 = temp;

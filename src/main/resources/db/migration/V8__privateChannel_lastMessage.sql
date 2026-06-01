@@ -1,14 +1,17 @@
 BEGIN;
 
 -- 1. Drop the unused column to completely eliminate row-locking overhead
-ALTER TABLE private_channels DROP COLUMN IF EXISTS last_message_id;
+ALTER TABLE private_channel DROP COLUMN IF EXISTS last_message_id;
+ALTER TABLE private_channel DROP COLUMN IF EXISTS create_at;
+ALTER TABLE private_channel DROP COLUMN IF EXISTS update_at;
+
 
 -- 2. Ensure foreign key columns are constrained properly
-ALTER TABLE private_channels ALTER COLUMN user1_id SET NOT NULL;
-ALTER TABLE private_channels ALTER COLUMN user2_id SET NOT NULL;
+ALTER TABLE private_channel ALTER COLUMN user1_id SET NOT NULL;
+ALTER TABLE private_channel ALTER COLUMN user2_id SET NOT NULL;
 
 -- 3. Apply the unique pair constraint to stop duplicate channels natively
-ALTER TABLE private_channels
+ALTER TABLE private_channel
 ADD CONSTRAINT uq_private_channel_users UNIQUE (user1_id, user2_id);
 
 -- 4. Create explicit speed indexes for your chat list queries

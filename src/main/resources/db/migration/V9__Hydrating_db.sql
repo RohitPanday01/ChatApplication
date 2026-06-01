@@ -20,65 +20,91 @@ FROM generate_series(1, 10000) AS i;
 -- STEP 2: HYDRATE 100,000 PRIVATE CHANNELS
 -----------------------------------------------------------------------
 -- To ensure user1_id < user2_id structurally, we evaluate the strings
-INSERT INTO private_channels (private_channel_id, user1_id, user2_id)
+INSERT INTO private_channel (private_channel_id, user1_id, user2_id )
 SELECT
-    md5('channel_' || i)::uuid,
-    CASE
-        WHEN md5('user_' || ((i % 10000) + 1)) < md5('user_' || (((i + 500) % 10000) + 1))
-        THEN md5('user_' || ((i % 10000) + 1))::uuid
-        ELSE md5('user_' || (((i + 500) % 10000) + 1))::uuid
-    END,
-    CASE
-        WHEN md5('user_' || ((i % 10000) + 1)) < md5('user_' || (((i + 500) % 10000) + 1))
-        THEN md5('user_' || (((i + 500) % 10000) + 1))::uuid
-        ELSE md5('user_' || ((i % 10000) + 1))::uuid
-    END
-FROM generate_series(1, 100000) AS i;
+    md5('channel_' || ( ((u - 1) * 10) + offset) )::uuid,
+
+    LEAST(md5('user_' || u)::uuid, md5('user_' || (((u + offset - 1) % 10000) + 1))::uuid),
+    GREATEST(md5('user_' || u)::uuid, md5('user_' || (((u + offset - 1) % 10000) + 1))::uuid)
+
+FROM generate_series(1, 10000) AS u
+CROSS JOIN generate_series(1, 10) AS offset;
 
 -----------------------------------------------------------------------
 -- STEP 3: INITIALIZE CHAT PARTICIPANT STATES
 -----------------------------------------------------------------------
 -- Inserts state pointers for both users in each generated channel
 INSERT INTO chat_participant_state (private_channel_id, user_id, last_delivered_seq, last_read_seq)
-SELECT private_channel_id, user1_id, 0, 0 FROM private_channels
+SELECT private_channel_id, user1_id, 0, 0 FROM private_channel;
 UNION ALL
-SELECT private_channel_id, user2_id, 0, 0 FROM private_channels;
+SELECT private_channel_id, user2_id, 0, 0 FROM private_channel;
 
 -----------------------------------------------------------------------
 -- STEP 4: MASS INSERT 5,000,000 MESSAGES WITH INLINE SNOWFLAKE IDs
 -----------------------------------------------------------------------
 RAISE NOTICE 'Generating 5,000,000 Snowflake-indexed messages...';
 
-INSERT INTO private_message (message_id, private_channel_id, from_user_id, to_user_id, message_type, message_seq, content, sent_at)
-SELECT
-    gen_random_uuid(), -- Unique message UUID primary key
-    md5('channel_' || ((i % 100000) + 1))::uuid, -- Evenly distributes messages across channels
 
-    -- Pick sender/receiver from the channel layout
-    CASE WHEN i % 2 = 0
-        THEN (SELECT user1_id FROM private_channels WHERE private_channel_id = md5('channel_' || ((i % 100000) + 1))::uuid)
-        ELSE (SELECT user2_id FROM private_channels WHERE private_channel_id = md5('channel_' || ((i % 100000) + 1))::uuid)
+WITH channel_seed AS (
+    SELECT
+        private_channel_id,
+        user1_id,
+        user2_id,
+        ROW_NUMBER() OVER (
+            ORDER BY private_channel_id
+        ) AS channel_num
+    FROM private_channel
+)
+
+INSERT INTO private_message (
+    message_id,
+    private_channel_id,
+    from_user_id,
+    to_user_id,
+    message_type,
+    message_seq,
+    content,
+    sent_at
+)
+SELECT
+    md5(
+        cs.private_channel_id::text || '_' || msg_num
+    )::uuid,
+
+    cs.private_channel_id,
+
+    CASE
+        WHEN msg_num % 2 = 0
+            THEN cs.user1_id
+        ELSE
+            cs.user2_id
     END,
-    CASE WHEN i % 2 = 0
-        THEN (SELECT user2_id FROM private_channels WHERE private_channel_id = md5('channel_' || ((i % 100000) + 1))::uuid)
-        ELSE (SELECT user1_id FROM private_channels WHERE private_channel_id = md5('channel_' || ((i % 100000) + 1))::uuid)
+
+    CASE
+        WHEN msg_num % 2 = 0
+            THEN cs.user2_id
+        ELSE
+            cs.user1_id
     END,
 
     'TEXT',
 
-    -- THE INLINE SNOWFLAKE GENERATOR MATHEMATICS
     (
-      -- Component A: Time offset shifted left by 22 bits
-      ((CAST(EXTRACT(EPOCH FROM (NOW() - (random() * INTERVAL '30 days'))) * 1000 AS BIGINT) - 1704067200000) << 22)
-      -- Component B: Hardcoded Datacenter/Worker ID (1) shifted left by 12 bits
-      | (1 << 12)
-      -- Component C: Rolling localized sequence padding to prevent collisions
-      | (i % 4096)
-    ),
+          -- Bits 22-62: Chronological millisecond timestamp bucket
+          ((CAST(EXTRACT(EPOCH FROM (NOW() - INTERVAL '30 days' +
+           (cs.channel_num * INTERVAL '10 seconds') + (msg_num * INTERVAL '1 minute'))) * 1000 AS BIGINT) - 1704067200000) << 22)
+          -- Bits 12-21: Simulated Machine/Worker ID (1)
+          | (1 << 12)
+          -- Bits 0-11: Sequence buffer to safely protect uniqueness per millisecond
+          | (msg_num % 4096)
+        ),
 
-    'This is load test message number ' || i || ' using native database Snowflake sequences.',
-    NOW() - (random() * INTERVAL '30 days')
-FROM generate_series(1, 5000000) AS i;
+        'Load test message Number is ' || msg_num,
+
+        NOW() - INTERVAL '30 days' + (cs.channel_num * INTERVAL '10 seconds') + (msg_num * INTERVAL '1 minute'),
+
+FROM channel_seed cs
+CROSS JOIN generate_series(1,50) AS msg_num;
 
 COMMIT;
 

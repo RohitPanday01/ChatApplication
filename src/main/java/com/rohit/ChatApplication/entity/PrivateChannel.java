@@ -20,7 +20,7 @@ import java.util.UUID;
 @BatchSize(size = 64)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
-        name = "private_channels",
+        name = "private_channel",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uq_private_channel_users", columnNames = {"user1_id", "user2_id"})
         },
@@ -95,7 +95,7 @@ public class PrivateChannel extends TimeStampBase{
     }
 
     public User anotherMember(User member){
-        if(member.getUserId() == user1.getUserId()){
+        if(member.getUserId().equals(user1.getUserId())){
             return user2;
         }
 
