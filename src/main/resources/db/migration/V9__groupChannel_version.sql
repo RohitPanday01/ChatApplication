@@ -1,0 +1,9 @@
+BEGIN;
+
+ALTER TABLE group_channel
+DROP COLUMN version;
+
+ALTER TABLE group_channel
+ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
+
+COMMIT;

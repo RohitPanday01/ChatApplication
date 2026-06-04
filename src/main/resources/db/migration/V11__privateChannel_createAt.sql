@@ -1,0 +1,2 @@
+ALTER TABLE private_channel
+ADD COLUMN create_at TIMESTAMP WITH TIME ZONE;

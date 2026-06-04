@@ -1,6 +1,6 @@
 
 # Stage 1: Build the JAR
-FROM maven:3.9.6-eclipse-temurin-21 AS builder
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 # Copy maven executable and pom.xml to cache dependencies
 COPY .mvn/ .mvn
@@ -13,9 +13,8 @@ RUN ./mvnw clean package -DskipTests
 
 
 # --- Stage 2: Runtime Stage ---
-FROM eclipse-temurin:17-jre-alpine AS runtime
+FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app
-git p
 # 1. Security: Create a non-root user to run the application
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring

@@ -1,0 +1,8 @@
+BEGIN;
+ALTER TABLE group_member
+DROP COLUMN version;
+
+ALTER TABLE group_member
+ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
+
+COMMIT;

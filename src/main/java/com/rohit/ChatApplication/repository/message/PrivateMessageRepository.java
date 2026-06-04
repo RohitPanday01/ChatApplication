@@ -16,7 +16,7 @@ public interface PrivateMessageRepository extends JpaRepository<PrivateMessage ,
 
     boolean existsByMessageId(UUID message_id);
 
-    boolean existByMessagesSeq(long messageSeq);
+    boolean existsByMessageSeq(Long messageSeq);
 
 //    @Query("""
 //        SELECT pm
@@ -30,15 +30,15 @@ public interface PrivateMessageRepository extends JpaRepository<PrivateMessage ,
     @Query("""
         SELECT pm
         FROM PrivateMessage pm
-        WHERE pm.privateChannel.id = :channelId
-        ORDER BY pm.message_seq DESC
+        WHERE pm.privateChannel.privateChannelId = :channelId
+        ORDER BY pm.messageSeq DESC
     """)
     Slice<PrivateMessage> getAllByChannel(@Param("channelId") UUID channelId, Pageable pageable);
 
     @Query("""
-            SELECT MAX(message_seq)
-            FROM PrivateMessage pm
-            WHERE pm.privateChannel.id = :channelId
+            SELECT MAX(p.messageSeq)
+            FROM PrivateMessage p
+            WHERE p.privateChannel.privateChannelId = :channelId
             """)
     Long findMessageSeqByChannelId(@Param("channelId") UUID channelId);
 

@@ -32,11 +32,7 @@ public class ReadReceiptProducer {
 
 
     public void sendReadReceipt(ReadReceipt event){
-
-
           kafkaTemplate.send(readReceiptTopic, event.getChannelId(), event);
-
-
     }
 
 

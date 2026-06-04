@@ -47,8 +47,7 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<GroupMember> memberships = new HashSet<>();
 
-    @Column(name = "last_seen")
-    private LocalDateTime lastSeen;
+
 
 
     @Column(name = "profile_photo_path", length = 250)

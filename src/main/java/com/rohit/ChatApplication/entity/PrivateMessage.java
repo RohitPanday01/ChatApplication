@@ -19,6 +19,7 @@ public class PrivateMessage extends  TimeStampBase{
 
 
 
+    @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "message_id")
     private UUID messageId;
@@ -50,8 +51,7 @@ public class PrivateMessage extends  TimeStampBase{
 //
 //    private Instant deliveredAt;
 
-    @Enumerated(EnumType.STRING)
-    private PrivateMessageStatus status;
+
 
     @Column(columnDefinition = "Text", nullable = false)
     private String content;

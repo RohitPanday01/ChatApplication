@@ -26,8 +26,8 @@ public class GroupChannel extends TimeStampBase {
     private UUID groupId;
 
     @Version
-    @Column(nullable = false, columnDefinition = "TIMESTAMP DEFAULT now()")
-    private Instant version;
+    @Column(nullable = false)
+    private Long version;
 
     @Column(name = "group_name", nullable = false)
     private String groupName = "";

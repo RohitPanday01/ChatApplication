@@ -20,15 +20,17 @@ FROM generate_series(1, 10000) AS i;
 -- STEP 2: HYDRATE 100,000 PRIVATE CHANNELS
 -----------------------------------------------------------------------
 -- To ensure user1_id < user2_id structurally, we evaluate the strings
-INSERT INTO private_channel (private_channel_id, user1_id, user2_id )
+INSERT INTO private_channel (private_channel_id,user1blocked_user2, user2blocked_user1, user1_id, user2_id  )
 SELECT
-    md5('channel_' || ( ((u - 1) * 10) + offset) )::uuid,
+    md5('channel_' || ( ((u - 1) * 10) + off) )::uuid,
+    FALSE,
+    FALSE,
 
-    LEAST(md5('user_' || u)::uuid, md5('user_' || (((u + offset - 1) % 10000) + 1))::uuid),
-    GREATEST(md5('user_' || u)::uuid, md5('user_' || (((u + offset - 1) % 10000) + 1))::uuid)
+    LEAST(md5('user_' || u)::uuid, md5('user_' || (((u + off - 1) % 10000) + 1))::uuid),
+    GREATEST(md5('user_' || u)::uuid, md5('user_' || (((u + off - 1) % 10000) + 1))::uuid)
 
 FROM generate_series(1, 10000) AS u
-CROSS JOIN generate_series(1, 10) AS offset;
+CROSS JOIN generate_series(1, 10) AS off;
 
 -----------------------------------------------------------------------
 -- STEP 3: INITIALIZE CHAT PARTICIPANT STATES
@@ -74,34 +76,38 @@ SELECT
     cs.private_channel_id,
 
     CASE
-        WHEN msg_num % 2 = 0
-            THEN cs.user1_id
-        ELSE
-            cs.user2_id
+        WHEN msg_num % 2 = 0 THEN cs.user1_id
+        ELSE cs.user2_id
     END,
 
     CASE
-        WHEN msg_num % 2 = 0
-            THEN cs.user2_id
-        ELSE
-            cs.user1_id
+        WHEN msg_num % 2 = 0 THEN cs.user2_id
+        ELSE cs.user1_id
     END,
 
     'TEXT',
 
     (
-          -- Bits 22-62: Chronological millisecond timestamp bucket
-          ((CAST(EXTRACT(EPOCH FROM (NOW() - INTERVAL '30 days' +
-           (cs.channel_num * INTERVAL '10 seconds') + (msg_num * INTERVAL '1 minute'))) * 1000 AS BIGINT) - 1704067200000) << 22)
-          -- Bits 12-21: Simulated Machine/Worker ID (1)
-          | (1 << 12)
-          -- Bits 0-11: Sequence buffer to safely protect uniqueness per millisecond
-          | (msg_num % 4096)
-        ),
+        ((CAST(
+            EXTRACT(
+                EPOCH FROM (
+                    NOW()
+                    - INTERVAL '30 days'
+                    + (cs.channel_num * INTERVAL '10 seconds')
+                    + (msg_num * INTERVAL '1 minute')
+                )
+            ) * 1000 AS BIGINT
+        ) - 1704067200000) << 22)
+        | (1 << 12)
+        | (msg_num % 4096)
+    ),
 
-        'Load test message Number is ' || msg_num,
+    'Load test message Number is ' || msg_num,
 
-        NOW() - INTERVAL '30 days' + (cs.channel_num * INTERVAL '10 seconds') + (msg_num * INTERVAL '1 minute'),
+    NOW()
+    - INTERVAL '30 days'
+    + (cs.channel_num * INTERVAL '10 seconds')
+    + (msg_num * INTERVAL '1 minute')
 
 FROM channel_seed cs
 CROSS JOIN generate_series(1,50) AS msg_num;

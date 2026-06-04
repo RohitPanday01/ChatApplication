@@ -52,9 +52,20 @@ public class NotificationConsumer {
             }
 
 
-            CompletableFuture<Void> work = dispatch(event).thenCompose((v)->
-                    readReceiptProducer.sendReadReceipt(event.getMessageId() ,event.getChannelId() , event.getFromUser(),
-                            event.getToUser(), ReceiptType.DELIVERED , Instant.now() ));
+            CompletableFuture<Void> work =
+                    dispatch(event).thenRun(()->readReceiptProducer.sendReadReceipt(
+                            new ReadReceipt(
+                                    event.getEventId(),
+                                    event.getMessageId(),
+                                    event.getChannelId(),
+                                    event.getFromUser(),
+                                    ReceiptType.DELIVERED,
+                                    event.getToUser(),
+                                    Instant.now()
+                            )
+                    ));
+
+
         } catch (Exception e) {
             try {
                 redisTemplate.delete(dedupKey);

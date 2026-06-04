@@ -13,7 +13,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - chatapplication_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
       interval: 5s
@@ -73,7 +73,7 @@ services:
   chat-app-1:
     build:
       context: ../..
-      dockerfile: ../../Dockerfile
+      dockerfile: Dockerfile
     container_name: chat-app-1
     restart: always
     depends_on:
@@ -90,9 +90,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
       JWT_SECRET: ${JWT_SECRET}
       NODE_ID: chat-app-1
     networks:
@@ -104,7 +104,8 @@ networks:
 
 
 volumes:
-  pgdata:
+  chatapplication_pgdata:
+    external: true
   my-redis:
 
 

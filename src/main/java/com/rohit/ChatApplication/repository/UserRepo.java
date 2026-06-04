@@ -20,10 +20,10 @@ public interface UserRepo extends JpaRepository<User, UUID> {
 
      Boolean existsByEmail(String email);
 
-     @Transactional
-     @Modifying
-     @Query("UPDATE User u SET u.lastSeen = :localDateTime WHERE u.username = :username")
-     void updateLastSeen(@Param("username") String username, @Param("localDateTime") LocalDateTime localDateTime);
+//     @Transactional
+//     @Modifying
+//     @Query("UPDATE User u SET u.lastSeen = :localDateTime WHERE u.username = :username")
+//     void updateLastSeen(@Param("username") String username, @Param("localDateTime") LocalDateTime localDateTime);
 
 
 }

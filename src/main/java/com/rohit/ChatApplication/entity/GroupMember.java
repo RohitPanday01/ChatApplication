@@ -21,8 +21,8 @@ import java.util.UUID;
 public class GroupMember extends TimeStampBase {
 
     @Version
-    @Column(nullable = false, columnDefinition = "TIMESTAMP DEFAULT now()")
-    private Instant version;
+    @Column(nullable = false)
+    private Long version;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -29,7 +29,7 @@ import java.util.UUID;
                 @Index(name = "idx_private_channels_user2", columnList = "user2_id")
         }
 )
-public class PrivateChannel extends TimeStampBase{
+public class PrivateChannel extends  TimeStampBase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
