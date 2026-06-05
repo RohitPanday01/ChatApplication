@@ -1,3 +1,5 @@
+import hashlib
+import itertools
 import json
 import time
 import random
@@ -5,6 +7,17 @@ import uuid
 from locust import HttpUser, task, between, events
 import websocket
 import gevent
+
+START_RANGE = 1
+END_RANGE = 10000
+
+# Thread-safe global counter matching your generate_series start point
+user_id_generator = itertools.count(start=START_RANGE)
+
+def get_deterministic_user_uuid(num: int)-> str: 
+    hex_result = hashlib.md5(f"user_{num}".encode('utf-8')).hexdigest() 
+    return str(uuid.UUID(hex_result))
+    
 
 class ChatUser(HttpUser):
     # Simulate realistic human pacing: wait 1 to 3 seconds between actions
@@ -16,34 +29,23 @@ class ChatUser(HttpUser):
         Establishes a persistent WebSocket connection to your Spring Boot Monolith.
         """
 
-        random_id = random.randint(10000, 99999)
+        self.random_id = user_id_generator.__next__()
 
-        self.username = f"user_{random_id}"
-        self.email = f"user_{random_id}@example.com"
-        self.password = "password123"
-        self.fullname = f"User {random_id}"
+        if self.random_id > END_RANGE:
+            print(f"Warning: Spawned user index {self.random_id} exceeds database bounds!")
+            return
+        
+        self.user_uuid = get_deterministic_user_uuid(self.random_id)
+        self.username = f"user_{self.random_id}"
+        self.email = f"user_{self.random_id}@chat-loadtest.com"
+        self.password = "$2a$10$7v5vFwYwY.."
+        self.fullname = f"LoadTest User {self.random_id}"
         self.access_token: str | None = None
         self.refresh_token: str | None = None
         self.ws = None
         self.running = True
+        self.fetched_channels = []
 
-
-        response = self.client.post("/api/v1/auth/Signup", json={
-            "username": self.username,
-            "email": self.email,
-            "password": self.password,
-            "fullname": self.fullname
-        })
-
-        
-        if response.status_code not in [200, 204]:
-            events.request.fire(
-                request_type="HTTP",
-                name="User Signup Failure",
-                response_time=0,
-                response_length=0,
-                exception=Exception(f"Signup failed with status code {response.status_code} for {self.username}")
-            )
         
         login_response = self.client.post("/api/v1/auth/Signin", json={
             "username": self.username,
@@ -54,11 +56,16 @@ class ChatUser(HttpUser):
             print(f"Login failed for {self.username} with status {login_response.status_code}")
             return
         
-        self.access_token = self.client.cookies.get("access_token")
+        self.access_token = self.client.cookies.get_dict().get("access_token")
 
         if not self.access_token:
             print(f"Failed to find access_token cookie for {self.username}")
             return
+
+        history_response = self.client.get("/api/v1/channel/private/?page=0&size=40")
+
+        if history_response.status_code == 200:
+            self.fetched_channels = history_response.json().get("list", [])
         
         base_ws_url = self.host.replace("http://", "ws://").replace("https://", "wss://")
         ws_endpoint = f"{base_ws_url}/ws/chat"
@@ -111,11 +118,11 @@ class ChatUser(HttpUser):
                 data = json.loads(message)
 
                 # Check if the incoming payload has our precision timestamp from the sender
-                if "timestamp" in data:
+                if "ingressTimestampNanos" in data:
                     # Calculate exactly how many milliseconds this message took to traverse
                     # through your Spring Boot App, Kafka brokers, and out to the consumer.
                     current_time_ms = int(time.time() * 1000)
-                    e2e_latency = current_time_ms - int(data["timestamp"])
+                    e2e_latency = current_time_ms - int(data["ingressTimestampNanos"])
 
                     # Log this specific message receipt back to Locust's metric engine
                     events.request.fire(
@@ -138,53 +145,111 @@ class ChatUser(HttpUser):
                 break
 
     @task(4)
-    def send_chat_message(self):
+    def chat_in_existing_channel(self):
         """Simulates sending a high-volume chat message payload through Kafka partitions."""
         if self.ws and self.ws.connected:
-            # Simulate a realistic variable chat room key to keep Kafka partitions balanced
-            self.message_seq += 1
         
             # 1. CHOOSE AN EXISTING CONVERSATION
-            # Instead of making new UUIDs, we pick one of the 5 pre-seeded chats at random.
-            target_chat = random.choice(self.active_conversations)
+            target_chat = random.choice(self.fetched_channels)
+            user1_dto = target_chat["user1"]
+            user2_dto = target_chat["user2"]
             
-            message_uuid = str(uuid.uuid4()) # Every individual message still gets a unique ID
+            u1_id = user1_dto["id"]
+            u2_id = user2_dto["id"]
+
+            if self.user_uuid == u1_id:
+                recipient_uuid = u2_id
+                recipient_name = user2_dto["username"]
+            else:
+                recipient_uuid = u1_id
+                recipient_name = user1_dto["username"]
+
+            # message_uuid = str(uuid.uuid4()) # Every individual message still gets a unique ID
 
             message_payload = {
-            "id": message_uuid,
-            "channel": target_chat["channel_id"],        # Reuses the exact same channel ID
-            "message_seq": self.message_seq,
-            "messageType": "CHAT",
-            
+            "channel": target_chat["id"],        # Reuses the exact same channel ID
+            "messageType": "TEXT",
             "from": {
                 "userId": self.user_uuid,
                 "username": self.username
             },
             "to": {
-                "userId": target_chat["recipient_id"],   # Reuses the persistent friend ID
-                "username": target_chat["recipient_name"]
+                "userId": recipient_uuid,   # Reuses the persistent friend ID
+                "username": recipient_name
             },
             
-            "content": f"Hey! Chatting in our thread. Msg #{self.message_seq}",
-            "ingressTimestampNanos": time.time_ns()
+            "content": f"Hey! Chatting in our thread, for Production-like load testing",
+            # "ingressTimestampNanos": time.time_ns()
         }
 
         self.client.post(
             "/api/v1/channel/privateprivate/publishMessage",
             json=message_payload
         )
+    
+
+    @task(1)
+    def chat_in_newchannel(self):
+        """Simulates starting a new conversation and sending a message, testing channel creation and partition assignment."""
+        if self.ws and self.ws.connected:
+            # 1. CREATE A NEW CONVERSATION WITH A RANDOM RECIPIENT
+            recipient_num = random.randint(START_RANGE, END_RANGE)
+            recipient_uuid = get_deterministic_user_uuid(recipient_num)
+            while recipient_uuid == self.user_uuid:
+                recipient_num = random.randint(START_RANGE, END_RANGE)
+                recipient_uuid = get_deterministic_user_uuid(recipient_num)
+            
+            recipient_name = f"user_{recipient_num}"
+
+
+            # 2. CONSTRUCT THE MESSAGE PAYLOAD
+            message_payload = {
+                "messageType": "TEXT",
+                "from": {
+                    "userId": self.user_uuid,
+                    "username": self.username
+                },
+                "to": {
+                    "userId": recipient_uuid,
+                    "username": recipient_name
+                },
+                "content": f"Hello {recipient_name}! This is a new conversation for load testing.",
+                # "ingressTimestampNanos": time.time_ns()
+            }
+
+            # 3. SEND THE MESSAGE TO THE SERVER (WHICH SHOULD CREATE A NEW CHANNEL)
+            self.client.post(
+                "/api/v1/channel/private/publishMessage",
+                json=message_payload
+            )
 
     @task(1)
     def send_typing_heartbeat(self):
         """Simulates a user typing. Tests high-frequency micro-payload handling."""
+        target_chat = random.choice(self.fetched_channels)
+        user1_dto = target_chat["user1"]
+        user2_dto = target_chat["user2"]
+        
+        u1_id = user1_dto["id"]
+        u2_id = user2_dto["id"]
+
+        if self.user_uuid == u1_id:
+            recipient_uuid = u2_id
+            recipient_name = user2_dto["username"]
+        else:
+            recipient_uuid = u1_id
+            recipient_name = user1_dto["username"]
+             
         if self.ws and self.ws.connected:
             payload = {
                 "type": "TYPING",
-                "senderId": self.user_id,
-                "chatRoomId": f"room_{random.randint(1, 100)}",
-                "status": "TYPING"
+                "from": self.user_id,
+                "to": recipient_name,
+                "channelId": target_chat["id"],
+                "isTyping": True
             }
             self._send_payload("Publish Typing Indicator", payload)
+
 
     def _send_payload(self, action_name, payload):
         """Helper matrix to safely push data over the socket pipe and report transmission speeds."""

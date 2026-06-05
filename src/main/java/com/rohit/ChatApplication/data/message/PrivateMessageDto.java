@@ -48,6 +48,7 @@ public class PrivateMessageDto   {
                   .build();
         this.content = message.getContent();
         this.sentAt =  message.getSentAt().toString();
+        this.ingressTimestampNanos = message.getSentAt().toEpochMilli();
 
     }
 

@@ -70,6 +70,7 @@ public class PrivateMessage extends  TimeStampBase{
         this.messageType = messageType;
         this.content =  content;
         this.messageSeq = messageSeq;
+        this.sentAt = Instant.now();
     }
 
     @Override
