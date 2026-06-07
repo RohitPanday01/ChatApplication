@@ -7,6 +7,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -20,8 +21,9 @@ public class ChatMetrics {
     private final Counter connectionsOpened ;
     private final Counter connectionsClosed;
     private final Counter sendFailures;
+    private final Counter wsMessagesDelivered;
     private final Timer messageProcessingTimer;
-    private final Timer e2eDeliveryTimer;;
+    private final Timer e2eDeliveryTimer;
 
 
     public ChatMetrics(MeterRegistry meterRegistry) {
@@ -40,8 +42,13 @@ public class ChatMetrics {
                 .description("Total raw WebSocket connections closed")
                 .register(meterRegistry);
 
+
+        this.wsMessagesDelivered =
+                Counter.builder("ws.messages.delivered.total")
+                        .register(meterRegistry);
+
         this.sendFailures = Counter.builder("ws.send.failures")
-                .description("Total raw WebSocket message send failures")
+                .description("Total raw WebSocket session send failures")
                 .register(meterRegistry);
 
         // 3. Timers: Configured with percentiles for load-testing analysis
@@ -61,11 +68,15 @@ public class ChatMetrics {
     public void incrementConnectionsOpened() { connectionsOpened.increment(); }
     public void incrementConnectionsClosed() { connectionsClosed.increment(); }
     public void incrementSendFailures() { sendFailures.increment(); }
+    public void incrementDelivered() {
+        wsMessagesDelivered.increment();
+    }
+
 
     public Timer getMessageProcessingTimer() { return messageProcessingTimer; }
 
     public void recordE2EDelivery(long startTimeNanos) {
-        e2eDeliveryTimer.record(System.nanoTime() - startTimeNanos, TimeUnit.NANOSECONDS);
+        e2eDeliveryTimer.record(Instant.now().toEpochMilli() - startTimeNanos, TimeUnit.MILLISECONDS);
     }
 
 

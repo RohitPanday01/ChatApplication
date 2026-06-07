@@ -201,7 +201,6 @@ class ChatUser(HttpUser):
             
             recipient_name = f"user_{recipient_num}"
 
-
             # 2. CONSTRUCT THE MESSAGE PAYLOAD
             message_payload = {
                 "messageType": "TEXT",
@@ -251,29 +250,29 @@ class ChatUser(HttpUser):
             self._send_payload("Publish Typing Indicator", payload)
 
 
-    def _send_payload(self, action_name, payload):
-        """Helper matrix to safely push data over the socket pipe and report transmission speeds."""
-        start_time = time.time()
-        try:
-            json_str = json.dumps(payload)
-            self.ws.send(json_str)
+    # def _send_payload(self, action_name, payload):
+    #     """Helper matrix to safely push data over the socket pipe and report transmission speeds."""
+    #     start_time = time.time()
+    #     try:
+    #         json_str = json.dumps(payload)
+    #         self.ws.send(json_str)
 
-            # Record successful transmission latency (how long it took to write to network buffer)
-            events.request.fire(
-                request_type="WebSocket",
-                name=action_name,
-                response_time=int((time.time() - start_time) * 1000),
-                response_length=len(json_str),
-                exception=None
-            )
-        except Exception as e:
-            events.request.fire(
-                request_type="WebSocket",
-                name=action_name,
-                response_time=int((time.time() - start_time) * 1000),
-                response_length=0,
-                exception=e
-            )
+    #         # Record successful transmission latency (how long it took to write to network buffer)
+    #         events.request.fire(
+    #             request_type="WebSocket",
+    #             name=action_name,
+    #             response_time=int((time.time() - start_time) * 1000),
+    #             response_length=len(json_str),
+    #             exception=None
+    #         )
+    #     except Exception as e:
+    #         events.request.fire(
+    #             request_type="WebSocket",
+    #             name=action_name,
+    #             response_time=int((time.time() - start_time) * 1000),
+    #             response_length=0,
+    #             exception=e
+    #         )
 
     def on_stop(self):
         """Runs cleanly when a virtual user is torn down at the end of the test execution."""
