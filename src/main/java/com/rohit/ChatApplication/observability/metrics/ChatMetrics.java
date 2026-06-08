@@ -18,7 +18,7 @@ public class ChatMetrics {
 
     private final AtomicInteger activeSessions = new AtomicInteger(0);
 
-    private final Counter connectionsOpened ;
+    private final Counter connectionsOpened;
     private final Counter connectionsClosed;
     private final Counter sendFailures;
     private final Counter wsMessagesDelivered;

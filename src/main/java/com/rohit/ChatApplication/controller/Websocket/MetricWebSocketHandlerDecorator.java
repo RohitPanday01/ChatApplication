@@ -9,6 +9,9 @@ import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 
+import java.time.Instant;
+import java.util.concurrent.TimeUnit;
+
 public class MetricWebSocketHandlerDecorator extends WebSocketHandlerDecorator {
 
     private final ChatMetrics metrics;
@@ -34,14 +37,14 @@ public class MetricWebSocketHandlerDecorator extends WebSocketHandlerDecorator {
 
     @Override
     public void handleMessage(@NonNull  WebSocketSession session, @NonNull  WebSocketMessage<?> message) throws Exception {
-        Timer.Sample sample = Timer.start();
+        long start = Instant.now().toEpochMilli();
         try {
             super.handleMessage(session, message);
         } catch (Exception e) {
             metrics.incrementSendFailures();
             throw e;
         } finally {
-            sample.stop(metrics.getMessageProcessingTimer());
+            metrics.getMessageProcessingTimer().record(Instant.now().toEpochMilli() - start, TimeUnit.MILLISECONDS );
         }
     }
 

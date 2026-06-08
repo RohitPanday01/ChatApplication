@@ -6,6 +6,7 @@ import com.rohit.ChatApplication.data.NotificationType;
 import com.rohit.ChatApplication.data.ReadReceipt;
 import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
+import com.rohit.ChatApplication.observability.metrics.KafkaMetrics;
 import com.rohit.ChatApplication.service.Notification.NotificationProducer;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptEmitService;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
@@ -32,6 +33,7 @@ public class DmDeliveryBusinessLogic {
     private final NodeIdentity nodeIdentity;
     private final NotificationProducer notificationProducer;
     private final ReadReceiptEmitService readReceiptEmitService;
+    private final KafkaMetrics kafkaMetrics;
 
     public DmDeliveryBusinessLogic(RedisTemplate<String , Object> redisTemplate,
                               KafkaTemplate<String, Object> kafkaTemplate,
@@ -39,7 +41,7 @@ public class DmDeliveryBusinessLogic {
                               ObjectMapper objectMapper,
                               NotificationProducer notificationProducer,
                               ReadReceiptProducer readReceiptProducer,NodeIdentity nodeIdentity,
-                                   ReadReceiptEmitService readReceiptEmitService){
+                                   ReadReceiptEmitService readReceiptEmitService , KafkaMetrics kafkaMetrics){
         this.redisTemplate = redisTemplate ;
         this.kafkaTemplate = kafkaTemplate;
         this.registerUserSession = registerUserSession;
@@ -48,6 +50,7 @@ public class DmDeliveryBusinessLogic {
         this.readReceiptProducer = readReceiptProducer;
         this.nodeIdentity = nodeIdentity;
         this.readReceiptEmitService = readReceiptEmitService;
+        this.kafkaMetrics = kafkaMetrics;
     }
 
 
@@ -104,7 +107,7 @@ public class DmDeliveryBusinessLogic {
             return;
         }
 
-        try {
+        try{
 
             session.sendMessage(
                     new TextMessage(objectMapper.writeValueAsString(messageDto)));
@@ -193,6 +196,8 @@ public class DmDeliveryBusinessLogic {
 
             readReceiptProducer.sendReadReceipt(readReceipt);
 
+            kafkaMetrics.incrementReadReceiptProduced();
+
             log.info("---->>>>>>>>>Read Reciept also sent");
 
         } catch (Exception e) {
@@ -213,6 +218,9 @@ public class DmDeliveryBusinessLogic {
 
             kafkaTemplate.send("inter-node-dm-delivery",
                     receiverNodeId, messageDto).join();
+
+            kafkaMetrics.incrementForwardProduced();
+
 
         } catch (Exception e) {
 
