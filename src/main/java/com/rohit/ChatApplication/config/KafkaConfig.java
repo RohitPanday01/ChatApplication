@@ -29,9 +29,12 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.FixedBackOff;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Configuration
 @EnableKafka
@@ -90,6 +93,11 @@ public class KafkaConfig {
         Map<String, Object > props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "dm-persistence-svc");
+        props.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, generateUniqueInstanceId());
+        props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,  300000);
+        props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 45000);
+        props.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 15000);
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
@@ -104,12 +112,28 @@ public class KafkaConfig {
                 deserializer);
     }
 
+    private String generateUniqueInstanceId() {
+        try {
+            // Extracts the network name of your EC2 instance (e.g., ip-10-0-1-45)
+            String hostName = InetAddress.getLocalHost().getHostName();
+            return "chat-app-" + hostName;
+        } catch (UnknownHostException e) {
+            // Fallback to a random unique identifier if network resolution fails
+            return "chat-delivery-fallback-" + UUID.randomUUID();
+        }
+    }
+
 
     public <T> ConsumerFactory<String, T> deliveryConsumerFactory(Class<T> targetType) {
+        String uniqueInstanceId = generateUniqueInstanceId();
         Map<String, Object > props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , "latest");
+        props.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, uniqueInstanceId);
+        props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 300000);
+        props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 45000);
+        props.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 15000);
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
         JsonDeserializer<T> deserializer = new JsonDeserializer<>(targetType);
