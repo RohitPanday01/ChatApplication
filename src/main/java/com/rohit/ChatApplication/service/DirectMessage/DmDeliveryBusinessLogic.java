@@ -97,12 +97,10 @@ public class DmDeliveryBusinessLogic {
     private void deliverToLocalSession(PrivateMessageDto messageDto) {
 
         String receiver = messageDto.getTo().getUsername();
-
         WebSocketSession session =
                 registerUserSession.getUserSessionInLocalNodeMap(receiver);
 
         if (session == null || !session.isOpen()) {
-
             handleOfflineUser(messageDto);
             return;
         }
@@ -113,7 +111,6 @@ public class DmDeliveryBusinessLogic {
                     new TextMessage(objectMapper.writeValueAsString(messageDto)));
 
             log.info("Message delivered to {}", receiver);
-
             sendReadReceipt(messageDto);
 
         } catch (Exception e) {
@@ -175,7 +172,6 @@ public class DmDeliveryBusinessLogic {
             log.error("Trying to send notification to notification producer failed messageId={}", messageDto.getId(), e);
             throw new RuntimeException("trying to send notification to notification producer failed", e );
         }
-
     }
 
     private boolean isUserOnline(String username) {

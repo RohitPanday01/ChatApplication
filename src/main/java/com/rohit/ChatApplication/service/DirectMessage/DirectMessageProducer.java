@@ -37,7 +37,6 @@ public class DirectMessageProducer {
         this.readReceiptProducer = readReceiptProducer;
         this.transactionalKafkaTemplate = transactionalKafkaTemplate;
         this.receiptEmitService = readReceiptEmitService;
-
     }
 
     public void sendDirectMessage(PrivateMessageDto dm ){
@@ -53,7 +52,6 @@ public class DirectMessageProducer {
         ReadReceipt sentEvent = receiptEmitService.emitSentReceipt(dm);
 
          readReceiptProducer.sendReadReceipt(sentEvent);
-
 //
     }
 

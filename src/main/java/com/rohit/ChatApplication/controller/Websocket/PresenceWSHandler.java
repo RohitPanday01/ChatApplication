@@ -93,19 +93,19 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        UserDetail userDetail = (UserDetail) session.getAttributes().get("userDetail");
-        if (userDetail == null) {
-            log.error("->>>>>>>>>>>WebSocket handshake failed: user not authenticated");
-            session.close(CloseStatus.NOT_ACCEPTABLE.withReason("Authentication required"));
-            return;
-        }
+//        UserDetail userDetail = (UserDetail) session.getAttributes().get("userDetail");
+//        if (userDetail == null) {
+//            log.error("->>>>>>>>>>>WebSocket handshake failed: user not authenticated");
+//            session.close(CloseStatus.NOT_ACCEPTABLE.withReason("Authentication required"));
+//            return;
+//        }
+//
+//        log.info("->>>>>>>>>>>>>User connected via WS: {}", userDetail.getUsername());
 
-        log.info("->>>>>>>>>>>>>User connected via WS: {}", userDetail.getUsername());
-
-       String username = userDetail.getUsername();
-        String userId = userDetail.getId();
-        session.getAttributes().put("userid", userId);
-       session.getAttributes().put("username", username);
+       String username = (String) session.getAttributes().get("username");
+        String userId = (String) session.getAttributes().get("userid");
+//        session.getAttributes().put("userid", userId);
+//       session.getAttributes().put("username", username);
 
        String thisServerNodeId = nodeIdentity.getNodeId();
 
@@ -143,7 +143,6 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
          }else if("ping".equalsIgnoreCase(type)){
              String username = (String) session.getAttributes().get("username");
-             String userId = (String)session.getAttributes().get("userid");
 
             redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
             session.sendMessage(new TextMessage("pong"));
@@ -175,7 +174,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
                 subscriptionManager.unsubscribeUserChannels(userId);
             }
 
-            redisTemplate.delete("nodeId:"+ username );
+            redisTemplate.delete("nodeId:"+ username);
 
             for(GroupChannelProfile groupChannelProfile : groupChannelProfiles ){
 
@@ -207,10 +206,11 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
     private void handleTyping(JsonNode node , WebSocketSession session)
             throws JsonProcessingException {
-        UserDetail userDetail = (UserDetail) session.getAttributes().get("userDetail");
-
-
-        String username = userDetail.getUsername();
+//        UserDetail userDetail = (UserDetail) session.getAttributes().get("userDetail");
+//
+//
+//        String username = userDetail.getUsername();
+        String username = (String) session.getAttributes().get("username");
 //        String userId = userDetail.getId();
         String channelId =  node.path("channelId").asText();
         String to = node.path("to").asText(null);

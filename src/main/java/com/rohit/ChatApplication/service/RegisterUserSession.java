@@ -53,7 +53,6 @@ public class RegisterUserSession implements RegisterUserSessionManager {
 
         groupSessions.computeIfAbsent(groupId , g -> ConcurrentHashMap.newKeySet()).add(session);
 
-
     }
 
     @Override

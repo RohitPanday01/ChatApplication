@@ -57,7 +57,6 @@ public class DMPersistenceListener {
 
                message.ifPresent(batches::add);
 
-
             }
 
             if (!batches.isEmpty()) {

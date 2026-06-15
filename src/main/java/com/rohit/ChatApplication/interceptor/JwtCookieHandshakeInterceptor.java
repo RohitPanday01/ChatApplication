@@ -34,7 +34,8 @@ public class JwtCookieHandshakeInterceptor implements HandshakeInterceptor {
     }
 
     @Override
-    public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
+    public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler,
+                                   Map<String, Object> attributes) throws Exception {
 
         if(request instanceof ServletServerHttpRequest){
             HttpServletRequest servletRequest =  ((ServletServerHttpRequest) request).getServletRequest();
@@ -42,16 +43,21 @@ public class JwtCookieHandshakeInterceptor implements HandshakeInterceptor {
 
             log.info("->>>>>>>>>>>>>>>>>> jwtToken in JwtCookieHandshakeInterceptor: {}", jwtToken);
 
-            if (jwtToken != null) {
-                String username =  jwtService.extractUserName(jwtToken);
-                UserDetail userDetails = usersDetailsService.loadUserByUsername(username);
-                if (jwtService.validateToken(jwtToken, userDetails)){
-                    UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    attributes.put("userDetail", userDetails);
 
-                    response.setStatusCode(HttpStatus.ACCEPTED);
-                    return true;
-                }
+            if (jwtToken != null && jwtService.validateTokenSignatureOnly(jwtToken)) {
+                String username =  jwtService.extractUserName(jwtToken);
+                String userId  = jwtService.extractUserId(jwtToken);
+
+//                UserDetail userDetails = usersDetailsService.loadUserByUsername(username);
+
+//                UsernamePasswordAuthenticationToken authenticationToken =
+//                   new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                attributes.put("username", username);
+                attributes.put("userid", userId);
+//                attributes.put("userDetail", userDetails);
+
+                response.setStatusCode(HttpStatus.ACCEPTED);
+
             }
         }
 

@@ -15,13 +15,13 @@ public class UserDetail implements UserDetails {
     private String id;
     private String username;
     private String password;
-    private Collection<? extends GrantedAuthority> authorities;
+//    private Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetail(String id, String username ,String password , Collection<? extends GrantedAuthority> authorities ) {
+    public UserDetail(String id, String username ,String password ) {
         this.id = id;
         this.username = username;
         this.password = password;
-        this.authorities = authorities;
+
     }
 
     @Override
@@ -35,9 +35,14 @@ public class UserDetail implements UserDetails {
         return Objects.hash(id, username);
     }
 
+//    @Override
+//    public Collection<? extends GrantedAuthority> getAuthorities() {
+//        return this.authorities;
+//    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return this.authorities;
+        return List.of();
     }
 
     @Override

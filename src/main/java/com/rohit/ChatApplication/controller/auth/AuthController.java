@@ -1,5 +1,6 @@
 package com.rohit.ChatApplication.controller.auth;
 
+import com.rohit.ChatApplication.data.UserDetail;
 import com.rohit.ChatApplication.data.auth.LoginDTO;
 import com.rohit.ChatApplication.data.auth.RegisterUserDTO;
 import com.rohit.ChatApplication.repository.UserRepo;
@@ -97,7 +98,7 @@ public class AuthController {
                     )
             );
 
-            UserDetails userDetails = usersDetailsService.loadUserByUsername(loginDTO.getUserName());
+            UserDetail userDetails = usersDetailsService.loadUserByUsername(loginDTO.getUserName());
          //   String token = jwtService.generateToken(userDetails);
 
             String accessToken = jwtService.generateToken(userDetails);
@@ -146,7 +147,7 @@ public class AuthController {
         }
 
         String username = jwtService.extractUserName(refreshToken);
-        UserDetails userDetails = usersDetailsService.loadUserByUsername(username);
+        UserDetail userDetails = usersDetailsService.loadUserByUsername(username);
 
         String newAccessToken = jwtService.generateToken(userDetails);
         String newRefreshToken = jwtService.generateRefreshToken(userDetails);

@@ -51,24 +51,23 @@ public class UsersDetailsServiceImpl implements UserDetailsService {
         User user = userRepo.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Username not found"));
 
-        Set<GrantedAuthority> authorities = new HashSet<>();
-
-        List<GroupMember> groupMembers = groupMemberRepo.findByUser(user);
-
-        if (groupMembers != null && !groupMembers.isEmpty()) {
-            for (GroupMember groupMember : groupMembers) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_" + groupMember.getGroupRole().name()));
-            }
-        } else {
-
-            authorities.add(new SimpleGrantedAuthority("ROLE_Member"));
-        }
+//        Set<GrantedAuthority> authorities = new HashSet<>();
+//
+//        List<GroupMember> groupMembers = groupMemberRepo.findByUser(user);
+//
+//        if (groupMembers != null && !groupMembers.isEmpty()) {
+//            for (GroupMember groupMember : groupMembers) {
+//                authorities.add(new SimpleGrantedAuthority("ROLE_" + groupMember.getGroupRole().name()));
+//            }
+//        } else {
+//
+//            authorities.add(new SimpleGrantedAuthority("ROLE_Member"));
+//        }
 
         return new UserDetail(
                 user.getUserId().toString(),
                 user.getUsername(),
-                user.getPassword(),
-                authorities
+                user.getPassword()
                 );
     }
 
