@@ -11,8 +11,9 @@ RUN ./mvnw dependency:go-offline
 COPY src ./src
 RUN ./mvnw clean package -DskipTests
 
-
 # --- Stage 2: Runtime Stage ---
+#Upgrade: Switched from Alpine (musl) to Ubuntu-slim (glibc) on ec2
+# to optimize concurrent epoll/NIO native memory allocation mechanics.
 FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app
 # 1. Security: Create a non-root user to run the application
@@ -23,8 +24,17 @@ USER spring:spring
 COPY --from=build /app/target/*.jar app.jar
 
 # 3. Memory Tuning: Configure JVM for container environments
-# MaxRAMPercentage allows the JVM to scale with the Docker container's memory limits
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:ActiveProcessorCount=2 -Djava.security.egd=file:/dev/./urandom"
+# Memory, Thread Stack, and G1GC Kernel Tuning Parameters
+# Hardcoded while deploying to match  4.5 GB Heap / 2.0 GB Off-Heap allocation blueprint for an 8 GB EC2 Nodes
+ENV JAVA_OPTS="-Xms2500m -Xmx2500m \
+               -Xss512k \
+               -XX:+UseG1GC \
+               -XX:MaxGCPauseMillis=20 \
+               -XX:InitiatingHeapOccupancyPercent=45 \
+               -XX:G1ReservePercent=15 \
+               -XX:ActiveProcessorCount=2 \
+               -Xlog:gc* \
+               -Djava.security.egd=file:/dev/./urandom"
 
 # 4. Observability: Expose the app port and Actuator port
 EXPOSE 8080

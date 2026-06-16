@@ -52,7 +52,6 @@ public class RegisterUserSession implements RegisterUserSessionManager {
     public void registerUserSessionsInTheirGroups(String groupId , WebSocketSession session){
 
         groupSessions.computeIfAbsent(groupId , g -> ConcurrentHashMap.newKeySet()).add(session);
-
     }
 
     @Override
