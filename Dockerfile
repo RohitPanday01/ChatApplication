@@ -26,7 +26,7 @@ COPY --from=build /app/target/*.jar app.jar
 # 3. Memory Tuning: Configure JVM for container environments
 # Memory, Thread Stack, and G1GC Kernel Tuning Parameters
 # Hardcoded while deploying to match  4.5 GB Heap / 2.0 GB Off-Heap allocation blueprint for an 8 GB EC2 Nodes
-ENV JAVA_OPTS="-Xms2500m -Xmx2500m \
+ENV JAVA_OPTS="-Xms1500m -Xmx1500m \
                -Xss512k \
                -XX:+UseG1GC \
                -XX:MaxGCPauseMillis=20 \
