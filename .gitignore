@@ -44,3 +44,4 @@ secrets.yml
 
 # Python Virtual Environment Sandbox
 .venv/
+structure.txt
