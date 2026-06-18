@@ -45,7 +45,6 @@ public class RegisterUserSession implements RegisterUserSessionManager {
             throw new RuntimeException(e.getMessage());
         }
 
-
     }
 
     @Override

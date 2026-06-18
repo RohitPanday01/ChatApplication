@@ -35,6 +35,7 @@ import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 
 import java.time.Duration;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -61,7 +62,8 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
     private final GroupChannelServiceImpl groupChannelService;
 
-    private Set<GroupChannelProfile>groupChannelProfiles ;
+
+    private Map<String , Set<GroupChannelProfile> > groupChannelsForUser;
 
     private  final SessionSubscriptionManager subscriptionManager;
     private final NodeIdentity nodeIdentity;
@@ -112,10 +114,11 @@ public class PresenceWSHandler extends TextWebSocketHandler {
        redisTemplate.opsForValue().set("nodeId:"+ username , thisServerNodeId, Duration.ofMinutes(20));
 
 
-       registerUserSession.registerUserSessionInLocalNodeMap(username , session, userId);
+       registerUserSession.registerUserSessionInLocalNodeMap(username, session, userId);
        subscriptionManager.subscribeUserChannels(userId);
 
-       groupChannelProfiles =  groupChannelService.findAllGroupsForUser(userId);
+        Set<GroupChannelProfile> groupChannelProfiles =  groupChannelService.findAllGroupsForUser(userId);
+        groupChannelsForUser.put(username, groupChannelProfiles);
 
        for(GroupChannelProfile groupChannelProfile : groupChannelProfiles ){
 
@@ -175,6 +178,8 @@ public class PresenceWSHandler extends TextWebSocketHandler {
             }
 
             redisTemplate.delete("nodeId:"+ username);
+
+            Set<GroupChannelProfile> groupChannelProfiles = groupChannelsForUser.get(username);
 
             for(GroupChannelProfile groupChannelProfile : groupChannelProfiles ){
 
