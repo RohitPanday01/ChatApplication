@@ -35,6 +35,7 @@ import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 
 import java.time.Duration;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -105,13 +106,13 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 //        log.info("->>>>>>>>>>>>>User connected via WS: {}", userDetail.getUsername());
 
        String username = (String) session.getAttributes().get("username");
-        String userId = (String) session.getAttributes().get("userid");
+       String userId = (String) session.getAttributes().get("userid");
 //        session.getAttributes().put("userid", userId);
 //       session.getAttributes().put("username", username);
 
        String thisServerNodeId = nodeIdentity.getNodeId();
 
-       redisTemplate.opsForValue().set("nodeId:"+ username , thisServerNodeId, Duration.ofMinutes(20));
+       redisTemplate.opsForValue().set("nodeId:"+ username , thisServerNodeId);
 
 
        registerUserSession.registerUserSessionInLocalNodeMap(username, session, userId);
@@ -148,6 +149,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
              String username = (String) session.getAttributes().get("username");
 
             redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
+//            redisTemplate.opsForValue().set("nodeId:"+ username , nodeIdentity.getNodeId(), Duration.ofSeconds(60));
             session.sendMessage(new TextMessage("pong"));
         }
     }
@@ -177,7 +179,12 @@ public class PresenceWSHandler extends TextWebSocketHandler {
                 subscriptionManager.unsubscribeUserChannels(userId);
             }
 
-            redisTemplate.delete("nodeId:"+ username);
+//            String nodeID = (String) redisTemplate.opsForValue().get("nodeId:"+ username);
+//
+//            if(nodeIdentity.getNodeId().equals(nodeID)){
+//                redisTemplate.delete("nodeId:"+ username);
+//            }
+
 
             Set<GroupChannelProfile> groupChannelProfiles = groupChannelsForUser.get(username);
 

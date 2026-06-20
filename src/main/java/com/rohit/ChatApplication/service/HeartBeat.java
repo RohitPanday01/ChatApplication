@@ -9,6 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Set;
 
 @Service
@@ -28,14 +30,14 @@ public class HeartBeat {
 
     }
 
-    @Scheduled(fixedRate =  10000)
+    @Scheduled(fixedRate =  20000)
     public void checkHeartBeats(){
 
         long now = System.currentTimeMillis();
-        long staleTime = now - 90000;
+        long staleTime = now - 60000;
 
         Set<Object> staleUsers  =  redisTemplate.opsForZSet().rangeByScore("online_users_lastPing", 0 , staleTime);
-        log.info(">>>>>> Stale usesr from online userList:{} " , staleUsers);
+        log.info(">>>>>> Stale user from online userList:{} " , staleUsers);
 
         if(staleUsers == null) return;
 
@@ -53,7 +55,7 @@ public class HeartBeat {
 
 
             redisTemplate.delete("nodeId:"+ username );
-
+            redisTemplate.opsForZSet().remove("online_users_lastPing", username);
 
         }
     }
