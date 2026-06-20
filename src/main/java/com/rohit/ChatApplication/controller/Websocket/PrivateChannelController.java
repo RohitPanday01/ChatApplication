@@ -28,6 +28,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -76,42 +77,77 @@ public class PrivateChannelController {
     }
 
     @GetMapping(path = "/")
-    public ResponseEntity<SliceList<PrivateChannelProfile>>
+    public ResponseEntity<?>
     getAllPrivateChannelForUser(@RequestParam int page, @RequestParam int size)
-            throws UserDoesNotExist {
-        PageRequest pageRequest = PageRequest.of(page, size);
-        String user = AuthUtil.currentUserDetail().getId();
+            {
+                try{
+                    PageRequest pageRequest = PageRequest.of(page, size);
+                    String user = AuthUtil.currentUserDetail().getId();
 
-        SliceList<PrivateChannelProfile> privateChannelProfileSliceList  =
-                privateChannelService.getAllChannel(user,
-                        pageRequest.getPageNumber(), pageRequest.getPageSize());
+                    SliceList<PrivateChannelProfile> privateChannelProfileSliceList  =
+                            privateChannelService.getAllChannel(user,
+                                    pageRequest.getPageNumber(), pageRequest.getPageSize());
 
-        return ResponseEntity.ok( privateChannelProfileSliceList);
+                    return ResponseEntity.ok( privateChannelProfileSliceList);
+
+                } catch (UserDoesNotExist e) {
+                    return ResponseEntity
+                            .status(HttpStatus.NOT_FOUND)
+                            .body(new ErrorMessageResponse(
+                                    e.getMessage()));
+                }
+
     }
 
     @GetMapping(path = "{channelId}/messages")
-    public ResponseEntity<SliceList<PrivateMessageDto>>
-     getAllMessages(@PathVariable String channelId , @RequestParam int page, @RequestParam int size )
-            throws UserDoesNotExist, ChannelDoesNotExist, InvalidOperation {
+    public ResponseEntity<?>
+     getAllMessages(@PathVariable String channelId , @RequestParam int page, @RequestParam int size ){
 
-        String userId = AuthUtil.currentUserDetail().getId();
-        PageRequest pageRequest = PageRequest.of(page, size);
-        SliceList<PrivateMessageDto> privateMessageDtoSliceList = privateMessageService.getAllMessages(userId, channelId, pageRequest);
 
-        return ResponseEntity.ok(privateMessageDtoSliceList);
+        try {
+
+            String userId = AuthUtil.currentUserDetail().getId();
+            PageRequest pageRequest = PageRequest.of(page, size);
+            SliceList<PrivateMessageDto> privateMessageDtoSliceList =
+                    privateMessageService.getAllMessages(userId, channelId, pageRequest);
+
+            return ResponseEntity.ok(privateMessageDtoSliceList);
+
+        } catch (UserDoesNotExist e) {
+
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorMessageResponse(
+                            e.getMessage()));
+
+        } catch (ChannelDoesNotExist e) {
+
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorMessageResponse(
+                            e.getMessage()));
+
+        } catch (InvalidOperation e) {
+
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorMessageResponse(
+                            e.getMessage()));
+        }
+
+
+
     }
 
 
 
     @PostMapping("/blockage/{channelId}" )
-    public ResponseEntity<Object> setBlockage(@PathVariable String channelId)
-    throws  IllegalArgumentException, ChannelDoesNotExist,  InvalidOperation,
-            UserDoesNotExist{
+    public ResponseEntity<Object> setBlockage(@PathVariable String channelId) {
         try {
             privateChannelService.block(
                     AuthUtil.currentUserDetail().getId(), channelId);
             return ResponseEntity.ok().build();
-        }catch (IllegalArgumentException e) {
+        }catch (IllegalArgumentException | UserDoesNotExist | ChannelDoesNotExist | InvalidOperation e) {
             return new ResponseEntity<>
                     (new ErrorMessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
         }
@@ -119,44 +155,45 @@ public class PrivateChannelController {
 
 
     @PostMapping("private/publishMessage")
-    public ResponseEntity<String> handlePrivateMessage(@RequestBody  PublishMessageRequest request)
-            throws UserDoesNotExist, ChannelDoesNotExist, InvalidOperation {
+    public ResponseEntity<?> handlePrivateMessage(@RequestBody  PublishMessageRequest request)
+            {
 
-        String senderId = AuthUtil.currentUserDetail().getId();
+        try{
+            String senderId = AuthUtil.currentUserDetail().getId();
 
-        if (!(request.getFrom().getId()).equals(senderId)) {
-            throw new InvalidOperation("Sender of this message is not same as LoggedIn User");
-        }
+//            if (!(request.getFrom().getId()).equals(senderId)) {
+//                throw new InvalidOperation("Sender of this message is not same as LoggedIn User");
+//            }
+//
+            String channelId = request.getChannelId();
 
-        String channelId = request.getChannelId();
+            if(channelId == null || channelId.isBlank()){
+                PrivateChannelProfile privateChannelProfile =
+                        privateChannelService.createChannelBetween(senderId, request.getTo().getId());
 
-        if(channelId == null || channelId.isBlank()){
-            PrivateChannelProfile privateChannelProfile =
-                    privateChannelService.createChannelBetween(senderId, request.getTo().getId());
+                channelId = privateChannelProfile.getId();
+            }
 
-            channelId = privateChannelProfile.getId();
-        }
+            PrivateMessageDto privateMessageDto = privateMessageService.createMessage(
+                    senderId,
+                    request.getChannelId(),
+                    request.getMessageContent(),
+                    request.getMessageType()
+            );
 
-        PrivateMessageDto privateMessageDto = privateMessageService.createMessage(
-                senderId,
-                request.getChannelId(),
-                request.getMessageContent(),
-                request.getMessageType()
-        );
-
-        if (privateMessageDto == null) {
-            throw new IllegalStateException("Failed to create message DTO");
-        }
-//        privateMessageDto.setIngressTimestampNanos(System.currentTimeMillis());
+            if (privateMessageDto == null) {
+                throw new IllegalStateException("Failed to create message DTO");
+            }
+    //        privateMessageDto.setIngressTimestampNanos(System.currentTimeMillis());
 
 
-        try {
-            // synchronous send (waits until producer sends)
-            directMessageProducer.sendDirectMessage(privateMessageDto);
-            return ResponseEntity.ok("Message Sent");
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to enqueue message: " + ex.getMessage());
+
+                // synchronous send (waits until producer sends)
+                directMessageProducer.sendDirectMessage(privateMessageDto);
+                return ResponseEntity.ok("Message Sent");
+        } catch (ChannelDoesNotExist | InvalidOperation | UserDoesNotExist e) {
+            return new ResponseEntity<>
+                    (new ErrorMessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
         }
 
 //        messageProducer.sendDirectMessage(dm); // fire & forget

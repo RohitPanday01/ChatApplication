@@ -35,6 +35,7 @@ import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
 
 import java.time.Duration;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -64,7 +65,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
     private final GroupChannelServiceImpl groupChannelService;
 
 
-    private Map<String , Set<GroupChannelProfile> > groupChannelsForUser;
+    private final ConcurrentMap<String , Set<GroupChannelProfile> > groupChannelsForUser = new ConcurrentHashMap<>();
 
     private  final SessionSubscriptionManager subscriptionManager;
     private final NodeIdentity nodeIdentity;
@@ -186,7 +187,8 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 //            }
 
 
-            Set<GroupChannelProfile> groupChannelProfiles = groupChannelsForUser.get(username);
+            Set<GroupChannelProfile> groupChannelProfiles = groupChannelsForUser
+                    .getOrDefault(username , Collections.emptySet() );
 
             for(GroupChannelProfile groupChannelProfile : groupChannelProfiles ){
 
@@ -197,6 +199,8 @@ public class PresenceWSHandler extends TextWebSocketHandler {
                     subscriptionManager.unsubscribeGroup(groupChannelProfile.getId() );
                 }
             }
+
+            groupChannelsForUser.remove(username);
 
         } catch (Exception e) {
             log.error("not able to user websocketSession remove from userSessions map ",  e);

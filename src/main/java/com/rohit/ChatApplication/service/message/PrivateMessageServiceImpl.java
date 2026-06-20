@@ -60,9 +60,10 @@ public class PrivateMessageServiceImpl{
     }
 
 
-    public Optional<PrivateMessage> toEntity(PrivateMessageDto messageDto){
+    public Optional<PrivateMessage> toEntity(PrivateMessageDto messageDto)
+            throws ChannelDoesNotExist, UserDoesNotExist {
 
-        try{
+
             PrivateChannel channel = getChannelById(messageDto.getChannel());
             User from = usersDetailsService.getUserById(messageDto.getFrom().getId());
             User to = channel.anotherMember(from);
@@ -79,13 +80,7 @@ public class PrivateMessageServiceImpl{
 
             return Optional.of(message);
 
-        } catch (ChannelDoesNotExist e) {
-            System.err.println("Channel not found: " + e.getMessage());
-            return Optional.empty();
-        } catch (UserDoesNotExist e) {
-            System.err.println("User not found: " + e.getMessage());
-            return Optional.empty();
-        }
+
     }
 
 
@@ -93,9 +88,10 @@ public class PrivateMessageServiceImpl{
     public PrivateMessageDto createMessage(String fromUserId ,
                                            String channelId,
                                            String Content ,
-                                           MessageType messageType) {
+                                           MessageType messageType)
+            throws UserDoesNotExist, ChannelDoesNotExist, InvalidOperation {
 
-        try{
+
             UUID channelUUID = UUID.fromString(channelId);
             User user = usersDetailsService.getUserById(fromUserId);
 
@@ -106,9 +102,7 @@ public class PrivateMessageServiceImpl{
 //            privateChannelRepository.saveAndFlush(privateChannel);
             return new PrivateMessageDto(privateMessage);
 
-        } catch (ChannelDoesNotExist | UserDoesNotExist | InvalidOperation e) {
-            throw new RuntimeException("Failed to create message: " + e.getMessage(), e);
-        }
+
 
     }
 

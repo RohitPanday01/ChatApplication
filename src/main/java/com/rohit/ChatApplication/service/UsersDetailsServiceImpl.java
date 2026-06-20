@@ -35,11 +35,9 @@ public class UsersDetailsServiceImpl implements UserDetailsService {
             IllegalArgumentException ,UserDoesNotExist {
 
         UUID uuid;
-        try {
+
             uuid = UUID.fromString(userId);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Invalid UUID format for user IDs.");
-        }
+
 
         return userRepo.findById(uuid)
                 .orElseThrow(()-> new UserDoesNotExist("userDoesNot exist"));

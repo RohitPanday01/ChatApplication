@@ -8,10 +8,15 @@ import com.rohit.ChatApplication.service.Typing.TypingSubscriber;
 import com.rohit.ChatApplication.service.channel.PrivateChannelServiceImpl;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 @Service
 public class SessionSubscriptionManager {
     private final ChannelSubscriberForTyping channelSubscriberForTyping;
     private final PrivateChannelServiceImpl privateChannelService;
+    private final ConcurrentMap<String, SliceList<PrivateChannelProfile>> channelForUserCache =
+            new ConcurrentHashMap<>();
 
     public SessionSubscriptionManager(ChannelSubscriberForTyping channelSubscriberForTyping,
                                       PrivateChannelServiceImpl privateChannelService) {

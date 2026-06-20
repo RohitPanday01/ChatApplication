@@ -47,7 +47,8 @@ public class PrivateChannelServiceImpl {
     }
 
 
-    public PrivateChannelProfile createChannelBetween(String fromUserId , String toUserId) throws UserDoesNotExist ,ChannelDoesNotExist {
+    public PrivateChannelProfile createChannelBetween(String fromUserId , String toUserId)
+            throws UserDoesNotExist ,ChannelDoesNotExist {
         if (fromUserId == null || toUserId == null) {
             throw new IllegalArgumentException("User IDs must not be null.");
         }
@@ -56,19 +57,12 @@ public class PrivateChannelServiceImpl {
             throw new IllegalStateException("You cannot create a channel with yourself.");
         }
 
-        UUID uuidA, uuidB;
-        try {
-            uuidA = UUID.fromString(fromUserId);
-            uuidB = UUID.fromString(toUserId);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Invalid UUID format for user IDs.");
-        }
+        UUID uuidA = UUID.fromString(fromUserId);
+        UUID uuidB = UUID.fromString(toUserId);
+
 
         User userA = userService.getUserById(fromUserId);
         User userB = userService.getUserById(toUserId);
-
-
-
 
 
 //        if (uuidA.compareTo(uuidB) > 0) {
@@ -91,14 +85,10 @@ public class PrivateChannelServiceImpl {
     public SliceList<PrivateChannelProfile> getAllChannel(String userID, int page , int size) throws
             UserDoesNotExist, IllegalArgumentException{
 
-        UUID uuidA;
-        try {
-            uuidA = UUID.fromString(userID);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Invalid UUID format for user IDs.");
-        }
+        UUID uuidA = UUID.fromString(userID);
 
-        User user = userService.getUserById(userID);
+
+//        User user = userService.getUserById(userID);
         Pageable pageable = PageRequest.of(page, size ,  Sort.by("createAt").descending());
 
         Slice<PrivateChannel> slice = privateChannelRepository.findByUserIdOrderByUpdateAtDesc(uuidA ,pageable);
@@ -115,23 +105,25 @@ public class PrivateChannelServiceImpl {
 
     @Transactional
     public PrivateChannelProfile getChannelProfile(String channelId , String userId) throws
-            UserDoesNotExist , ChannelDoesNotExist , InvalidOperation {
+             ChannelDoesNotExist , InvalidOperation {
         UUID userUuid , channelUuid ;
-        try {
+
             userUuid = UUID.fromString(userId);
             channelUuid = UUID.fromString(channelId);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Invalid UUID format for user IDs.");
-        }
 
-        User user = userService.getUserById(userId);
+//        User user = userService.getUserById(userId);
 
         PrivateChannel channel = getChannelById(channelUuid);
 
-        if(channel.getUser1().getUserId() != userUuid
-                || channel.getUser2().getUserId() != userUuid){
+        if(channel == null ){
+            throw new ChannelDoesNotExist("channel does not exist for " + channelId);
+        }
+
+        if( (channel.getUser1().getUserId() != userUuid
+                || channel.getUser2().getUserId() != userUuid)){
             throw new InvalidOperation("user is not in members of the channel !");
         }
+
 
         return new PrivateChannelProfile(channel);
     }
@@ -139,16 +131,16 @@ public class PrivateChannelServiceImpl {
 
 
     @Transactional
-    public void block(String userId, String channelId) throws UserDoesNotExist , ChannelDoesNotExist, InvalidOperation ,IllegalArgumentException {
+    public void block(String userId, String channelId)
+            throws UserDoesNotExist , ChannelDoesNotExist, InvalidOperation ,IllegalArgumentException {
         UUID userUuid , channelUuid ;
-        try {
-            userUuid = UUID.fromString(userId);
-            channelUuid = UUID.fromString(channelId);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid UUID format for user IDs.");
-        }
+
+        userUuid = UUID.fromString(userId);
+        channelUuid = UUID.fromString(channelId);
+
 
         User user = userService.getUserById(userId);
+
         PrivateChannel channel = getChannelById(channelUuid);
         if (channel.getUser1().getUserId() != userUuid
                 || channel.getUser2().getUserId() != userUuid)

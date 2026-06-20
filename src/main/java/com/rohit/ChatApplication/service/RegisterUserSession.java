@@ -29,7 +29,6 @@ public class RegisterUserSession implements RegisterUserSessionManager {
     public void registerUserSessionInLocalNodeMap(String username, WebSocketSession session , String userId) throws UserDoesNotExist {
         userSessions.putIfAbsent(username , session);
 
-
     }
 
     @Override

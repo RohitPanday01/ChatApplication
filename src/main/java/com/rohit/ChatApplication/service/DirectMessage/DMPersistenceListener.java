@@ -1,9 +1,12 @@
 package com.rohit.ChatApplication.service.DirectMessage;
 
 import com.rohit.ChatApplication.Batch.Message.PrivateMessage.PrivateMessageBatcher;
+import com.rohit.ChatApplication.data.ErrorMessageResponse;
 import com.rohit.ChatApplication.data.message.MessageDto;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
 import com.rohit.ChatApplication.entity.PrivateMessage;
+import com.rohit.ChatApplication.exception.ChannelDoesNotExist;
+import com.rohit.ChatApplication.exception.UserDoesNotExist;
 import com.rohit.ChatApplication.repository.message.PrivateMessageRepository;
 import com.rohit.ChatApplication.service.GroupMessage.FanOutService;
 import com.rohit.ChatApplication.service.MessageSequencing.SequenceService;
@@ -65,10 +68,12 @@ public class DMPersistenceListener {
 
             ack.acknowledge();
 
-        }catch(Exception exception){
-            log.error("Batch persistence failed. Triggering Kafka retry.", exception);
+        } catch (UserDoesNotExist | ChannelDoesNotExist e) {
+           log.error("Poison message", e);
+            ack.acknowledge();
 
-            throw exception;
+        } catch (Exception e) {
+            throw e;
         }
     }
 
