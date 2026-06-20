@@ -161,7 +161,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, @NonNull CloseStatus status) {
+    public void afterConnectionClosed(WebSocketSession session, @NonNull CloseStatus status)  {
         String username = (String) session.getAttributes().get("username");
         String userId = (String)session.getAttributes().get("userid");
         String sessionId = session.getId();
