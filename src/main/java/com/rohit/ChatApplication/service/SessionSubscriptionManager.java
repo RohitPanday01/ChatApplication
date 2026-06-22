@@ -8,6 +8,7 @@ import com.rohit.ChatApplication.service.Typing.TypingSubscriber;
 import com.rohit.ChatApplication.service.channel.PrivateChannelServiceImpl;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentMap;
 public class SessionSubscriptionManager {
     private final ChannelSubscriberForTyping channelSubscriberForTyping;
     private final PrivateChannelServiceImpl privateChannelService;
-    private final ConcurrentMap<String, SliceList<PrivateChannelProfile>> channelForUserCache =
+    private final ConcurrentMap<String, List<PrivateChannelProfile>> channelForUserCache =
             new ConcurrentHashMap<>();
 
     public SessionSubscriptionManager(ChannelSubscriberForTyping channelSubscriberForTyping,
@@ -25,41 +26,24 @@ public class SessionSubscriptionManager {
     }
 
     public void subscribeUserChannels(String userId) throws UserDoesNotExist {
-        int page = 0;
-        int size = 10;
 
-        while (true) {
-            SliceList<PrivateChannelProfile> privateChannelProfileSliceList =
-                    privateChannelService.getAllChannel(userId, page, size);
+        List<PrivateChannelProfile> privateChannelProfileList =
+                privateChannelService.getAllChannelWithoutPagination(userId);
+        channelForUserCache.put(userId , privateChannelProfileList );
 
-            for (PrivateChannelProfile profile : privateChannelProfileSliceList.getList()) {
-                channelSubscriberForTyping.subscribePrivateChannel(profile.getId());
-            }
-
-            if (!privateChannelProfileSliceList.isHasNext()) {
-                break;
-            }
-            page++;
+        for(PrivateChannelProfile privateChannelProfile : privateChannelProfileList){
+            channelSubscriberForTyping.subscribePrivateChannel(privateChannelProfile.getId());
         }
+
     }
 
     public void unsubscribeUserChannels(String userId) throws UserDoesNotExist {
-        int page = 0;
-        int size = 10;
+        List<PrivateChannelProfile> privateChannelProfileList = channelForUserCache.getOrDefault(userId , List.of());
 
-        while (true) {
-            SliceList<PrivateChannelProfile> privateChannelProfileSliceList =
-                    privateChannelService.getAllChannel(userId, page, size);
-
-            for (PrivateChannelProfile profile : privateChannelProfileSliceList.getList()) {
-                channelSubscriberForTyping.unsubscribePrivateChannel(profile.getId());
-            }
-
-            if (!privateChannelProfileSliceList.isHasNext()) {
-                break;
-            }
-            page++;
+        for(PrivateChannelProfile privateChannelProfile : privateChannelProfileList){
+            channelSubscriberForTyping.unsubscribePrivateChannel(privateChannelProfile.getId());
         }
+
     }
 
     public void subscribeGroup(String groupId) {

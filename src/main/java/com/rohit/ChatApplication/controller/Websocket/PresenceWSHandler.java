@@ -213,10 +213,10 @@ public class PresenceWSHandler extends TextWebSocketHandler {
             }
             return false;
         });
-
-        presencePublisher.publish(username , "offline");
-
-        redisTemplate.opsForZSet().remove("online_users_lastPing", username);
+//
+//        presencePublisher.publish(username , "offline");
+//
+//        redisTemplate.opsForZSet().remove("online_users_lastPing", username);
 
     }
 

@@ -89,7 +89,7 @@ public class PrivateChannelServiceImpl {
 
 
 //        User user = userService.getUserById(userID);
-        Pageable pageable = PageRequest.of(page, size ,  Sort.by("createAt").descending());
+        Pageable pageable = PageRequest.of(page, size ,  Sort.by("updatedAt").descending());
 
         Slice<PrivateChannel> slice = privateChannelRepository.findByUserIdOrderByUpdateAtDesc(uuidA ,pageable);
 
@@ -101,6 +101,23 @@ public class PrivateChannelServiceImpl {
                         .collect(Collectors.toList()),
                 slice.hasNext()
         );
+    }
+
+
+    public List<PrivateChannelProfile> getAllChannelWithoutPagination(String userID) throws
+            UserDoesNotExist, IllegalArgumentException{
+
+        UUID uuidA = UUID.fromString(userID);
+
+
+//        User user = userService.getUserById(userID);
+
+        List<PrivateChannel> privateChannels = privateChannelRepository.findAllChannelForUser(uuidA );
+
+        return privateChannels.stream()
+                .map(PrivateChannelProfile::new)
+                .toList();
+
     }
 
     @Transactional

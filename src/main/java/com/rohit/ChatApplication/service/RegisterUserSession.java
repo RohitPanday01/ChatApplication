@@ -26,8 +26,8 @@ public class RegisterUserSession implements RegisterUserSessionManager {
 
 
     @Override
-    public void registerUserSessionInLocalNodeMap(String username, WebSocketSession session , String userId) throws UserDoesNotExist {
-        userSessions.putIfAbsent(username , session);
+    public void registerUserSessionInLocalNodeMap(String username, WebSocketSession session , String userId) {
+        userSessions.put(username , session);
 
     }
 
@@ -43,7 +43,6 @@ public class RegisterUserSession implements RegisterUserSessionManager {
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
-
     }
 
     @Override
@@ -54,15 +53,17 @@ public class RegisterUserSession implements RegisterUserSessionManager {
 
     @Override
     public Set<WebSocketSession>  unregisterUserSessionInTheirGroups(String groupId, WebSocketSession session){
-        Set<WebSocketSession> sessions = groupSessions.getOrDefault(groupId ,Set.of());
+        Set<WebSocketSession> sessions =
+                groupSessions.get(groupId);
 
-        if(sessions != null){
-            sessions.remove(session);
+        if (sessions == null) {
+            return Set.of();
+        }
 
-            if (sessions.isEmpty()) {
-                groupSessions.remove(groupId);
+        sessions.remove(session);
 
-            }
+        if (sessions.isEmpty()) {
+            groupSessions.remove(groupId);
         }
 
         return sessions;

@@ -44,14 +44,11 @@ public class HeartBeat {
         for( Object obj : staleUsers ){
             String username = (String) obj;
 
-            WebSocketSession session = registerUserSession.getUserSessionInLocalNodeMap(username);
 
             presencePublisher.publish( username, "offline");
             redisTemplate.opsForZSet().remove("online_users_lastPing", username);
 
             log.info(">>>>>> Removed user from online userList:{} " , username);
-
-            if(session != null)  registerUserSession.unregisterUserSessionInLocalNodeMap(username,session);
 
 
             redisTemplate.delete("nodeId:"+ username );

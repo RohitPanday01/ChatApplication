@@ -36,6 +36,7 @@ public interface PrivateChannelRepository extends JpaRepository<PrivateChannel ,
         JOIN FETCH pc.user1 u1
         JOIN FETCH pc.user2 u2
         WHERE u1.userId = :userId OR u2.userId = :userId
+        ORDER BY pc.updatedAt Desc
     """)
     List<PrivateChannel> findAllChannelForUser(@Param("userId") UUID userId);
 
