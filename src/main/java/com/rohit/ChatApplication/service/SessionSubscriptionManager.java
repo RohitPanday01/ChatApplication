@@ -29,8 +29,7 @@ public class SessionSubscriptionManager {
     private static final String REDIS_KEY_PREFIX = "user:channels:";
     private final ChannelSubscriberForTyping channelSubscriberForTyping;
     private final PrivateChannelServiceImpl privateChannelService;
-    private final ConcurrentMap<String, List<PrivateChannelProfile>> channelForUserCache =
-            new ConcurrentHashMap<>();
+
 
     private final RedisTemplate<String , String > redisTemplate;
 

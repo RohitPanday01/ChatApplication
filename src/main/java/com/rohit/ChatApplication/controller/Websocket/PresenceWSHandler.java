@@ -102,26 +102,33 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
        String thisServerNodeId = nodeIdentity.getNodeId();
 
-       redisTemplate.opsForValue().set("nodeId:"+ username , thisServerNodeId);
-
+       redisTemplate.opsForValue().set("nodeId:"+username , thisServerNodeId);
        registerUserSession.registerUserSessionInLocalNodeMap(username, session, userId);
-       subscriptionManager.subscribeUserChannels(userId);
 
-        Set<String> groupChannelProfiles =  groupChannelService.findAllGroupsForUser(userId);
-        groupChannelsForUser.put(username, groupChannelProfiles);
+       try{
+           subscriptionManager.subscribeUserChannels(userId);
 
-       for(String id : groupChannelProfiles ){
+           Set<String> groupChannelProfiles =  groupChannelService.findAllGroupsForUser(userId);
+           groupChannelsForUser.put(username, groupChannelProfiles);
 
-           registerUserSession.registerUserSessionsInTheirGroups(id, session);
-           if(registerUserSession.getUserSessionsInTheirGroups(id).size() == 1){
-               subscriptionManager.subscribeGroup(id);
+           for(String id : groupChannelProfiles ){
+
+               registerUserSession.registerUserSessionsInTheirGroups(id, session);
+               if(registerUserSession.getUserSessionsInTheirGroups(id).size() == 1){
+                   subscriptionManager.subscribeGroup(id);
+               }
            }
+
+           redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
+           presencePublisher.publish(username , "online");
+           log.info("->>>>>>>>> published user is Online to redis Stream publisher: {}", username);
+
+       }catch (Exception e) {
+
+           log.error("Critical failure during subscription infrastructure hydration for user: {}", username, e);
+           session.close(CloseStatus.SERVER_ERROR.withReason("Subscription synchronization failed"));
        }
 
-       redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
-
-       presencePublisher.publish(username , "online");
-       log.info("->>>>>>>>> published user is Online to redis Stream publisher: {}", username);
     }
 
     @Override
