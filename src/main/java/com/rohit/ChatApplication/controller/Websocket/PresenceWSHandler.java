@@ -56,7 +56,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
     private final GroupChannelServiceImpl groupChannelService;
 
 
-    private final ConcurrentMap<String , Set<GroupChannelProfile> > groupChannelsForUser = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String , Set<String> > groupChannelsForUser = new ConcurrentHashMap<>();
 
     private  final SessionSubscriptionManager subscriptionManager;
     private final NodeIdentity nodeIdentity;
@@ -107,14 +107,14 @@ public class PresenceWSHandler extends TextWebSocketHandler {
        registerUserSession.registerUserSessionInLocalNodeMap(username, session, userId);
        subscriptionManager.subscribeUserChannels(userId);
 
-        Set<GroupChannelProfile> groupChannelProfiles =  groupChannelService.findAllGroupsForUser(userId);
+        Set<String> groupChannelProfiles =  groupChannelService.findAllGroupsForUser(userId);
         groupChannelsForUser.put(username, groupChannelProfiles);
 
-       for(GroupChannelProfile groupChannelProfile : groupChannelProfiles ){
+       for(String id : groupChannelProfiles ){
 
-           registerUserSession.registerUserSessionsInTheirGroups(groupChannelProfile.getId(), session);
-           if(registerUserSession.getUserSessionsInTheirGroups(groupChannelProfile.getId()).size() == 1){
-               subscriptionManager.subscribeGroup(groupChannelProfile.getId());
+           registerUserSession.registerUserSessionsInTheirGroups(id, session);
+           if(registerUserSession.getUserSessionsInTheirGroups(id).size() == 1){
+               subscriptionManager.subscribeGroup(id);
            }
        }
 
@@ -175,16 +175,16 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 //            }
 
 
-            Set<GroupChannelProfile> groupChannelProfiles = groupChannelsForUser
+            Set<String> groupChannelProfiles = groupChannelsForUser
                     .getOrDefault(username , Collections.emptySet() );
 
-            for(GroupChannelProfile groupChannelProfile : groupChannelProfiles ){
+            for(String id : groupChannelProfiles ){
 
                 Set<WebSocketSession> sessions =
-                        registerUserSession.unregisterUserSessionInTheirGroups(groupChannelProfile.getId() ,session);
+                        registerUserSession.unregisterUserSessionInTheirGroups(id ,session);
 
                 if (sessions.isEmpty()) {
-                    subscriptionManager.unsubscribeGroup(groupChannelProfile.getId() );
+                    subscriptionManager.unsubscribeGroup(id );
                 }
             }
 
