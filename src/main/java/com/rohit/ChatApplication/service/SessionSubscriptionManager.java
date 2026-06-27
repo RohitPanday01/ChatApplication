@@ -6,6 +6,8 @@ import com.rohit.ChatApplication.exception.UserDoesNotExist;
 import com.rohit.ChatApplication.service.Typing.ChannelSubscriberForTyping;
 import com.rohit.ChatApplication.service.Typing.TypingSubscriber;
 import com.rohit.ChatApplication.service.channel.PrivateChannelServiceImpl;
+import org.springframework.boot.autoconfigure.cache.CacheProperties;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,13 +21,18 @@ public class SessionSubscriptionManager {
     private final ConcurrentMap<String, List<PrivateChannelProfile>> channelForUserCache =
             new ConcurrentHashMap<>();
 
+    private final RedisTemplate<String , Object> redisTemplate;
+
     public SessionSubscriptionManager(ChannelSubscriberForTyping channelSubscriberForTyping,
-                                      PrivateChannelServiceImpl privateChannelService) {
+                                      PrivateChannelServiceImpl privateChannelService,
+                                      RedisTemplate<String, Object> redisTemplate) {
        this.channelSubscriberForTyping = channelSubscriberForTyping;
         this.privateChannelService = privateChannelService;
+        this.redisTemplate = redisTemplate;
     }
 
-    public void subscribeUserChannels(String userId) throws UserDoesNotExist {
+    public void subscribeUserChannels(String userId){
+
 
         List<PrivateChannelProfile> privateChannelProfileList =
                 privateChannelService.getAllChannelWithoutPagination(userId);
@@ -34,7 +41,6 @@ public class SessionSubscriptionManager {
         for(PrivateChannelProfile privateChannelProfile : privateChannelProfileList){
             channelSubscriberForTyping.subscribePrivateChannel(privateChannelProfile.getId());
         }
-
     }
 
     public void unsubscribeUserChannels(String userId) throws UserDoesNotExist {

@@ -4,6 +4,7 @@ import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.service.UserPresence.PresencePublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,12 +18,12 @@ import java.util.Set;
 public class HeartBeat {
 
     private final Logger log = LoggerFactory.getLogger(HeartBeat.class);
-    private final RedisTemplate<String , Object> redisTemplate;
+    private final RedisTemplate<String , String> redisTemplate;
     private final PresencePublisher presencePublisher;
     private final RegisterUserSession registerUserSession;
 
 
-    public HeartBeat(RedisTemplate<String , Object> redisTemplate ,PresencePublisher presencePublisher,
+    public HeartBeat(@Qualifier("redisStringTemplate")RedisTemplate<String , String> redisTemplate , PresencePublisher presencePublisher,
                      RegisterUserSession registerUserSession){
         this.redisTemplate = redisTemplate ;
         this.presencePublisher = presencePublisher;
@@ -36,23 +37,22 @@ public class HeartBeat {
         long now = System.currentTimeMillis();
         long staleTime = now - 60000;
 
-        Set<Object> staleUsers  =  redisTemplate.opsForZSet().rangeByScore("online_users_lastPing", 0 , staleTime);
+        Set<String> staleUsers  =  redisTemplate.opsForZSet().rangeByScore("online_users_lastPing", 0 , staleTime);
         log.info(">>>>>> Stale user from online userList:{} " , staleUsers);
 
         if(staleUsers == null) return;
 
-        for( Object obj : staleUsers ){
-            String username = (String) obj;
+        for( String staleUser : staleUsers ){
 
 
-            presencePublisher.publish( username, "offline");
-            redisTemplate.opsForZSet().remove("online_users_lastPing", username);
+            presencePublisher.publish(staleUser, "offline");
+            redisTemplate.opsForZSet().remove("online_users_lastPing", staleUser);
 
-            log.info(">>>>>> Removed user from online userList:{} " , username);
+            log.info(">>>>>> Removed user from online userList:{} " , staleUser);
 
 
-            redisTemplate.delete("nodeId:"+ username );
-            redisTemplate.opsForZSet().remove("online_users_lastPing", username);
+            redisTemplate.delete("nodeId:"+ staleUser);
+
 
         }
     }

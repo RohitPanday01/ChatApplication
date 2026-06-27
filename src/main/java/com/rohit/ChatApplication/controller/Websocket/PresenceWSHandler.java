@@ -23,6 +23,7 @@ import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -30,14 +31,8 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
-
-
-import java.time.Duration;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -47,14 +42,10 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
     private final Logger log = LoggerFactory.getLogger(PresenceWSHandler.class);
 
-    private final RedisTemplate<String , Object> redisTemplate;
+    private final RedisTemplate<String , String> redisTemplate;
     private final PresencePublisher presencePublisher;
     private final ObjectMapper mapper;
     private final TypingEventPublisher typingEventPublisher;
-
-
-    private final ConcurrentMap<String , WebSocketSession> userSessions =
-            new ConcurrentHashMap<>();
 
     private final RegisterUserSession registerUserSession;
 
@@ -72,7 +63,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
 
 
-    public PresenceWSHandler(RedisTemplate<String, Object> redisTemplate ,
+    public PresenceWSHandler(@Qualifier("redisStringTemplate") RedisTemplate<String, String> redisTemplate ,
                              PresencePublisher presencePublisher,  ObjectMapper mapper,
                              TypingEventPublisher typingEventPublisher ,
                              GroupChannelServiceImpl groupChannelService,
@@ -90,9 +81,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
     }
 
-    public WebSocketSession getSession(String username) {
-        return userSessions.get(username);
-    }
+
 
 
     @Override
@@ -114,7 +103,6 @@ public class PresenceWSHandler extends TextWebSocketHandler {
        String thisServerNodeId = nodeIdentity.getNodeId();
 
        redisTemplate.opsForValue().set("nodeId:"+ username , thisServerNodeId);
-
 
        registerUserSession.registerUserSessionInLocalNodeMap(username, session, userId);
        subscriptionManager.subscribeUserChannels(userId);
@@ -206,13 +194,13 @@ public class PresenceWSHandler extends TextWebSocketHandler {
             log.error("not able to user websocketSession remove from userSessions map ",  e);
         }
 
-        autoStopTimer.entrySet().removeIf(e ->{
-            if (e.getKey().contains(username)) {
-                e.getValue().cancel(false);
-                return true;
-            }
-            return false;
-        });
+//        autoStopTimer.entrySet().removeIf(e ->{
+//            if (e.getKey().contains(username)) {
+//                e.getValue().cancel(false);
+//                return true;
+//            }
+//            return false;
+//        });
 //
 //        presencePublisher.publish(username , "offline");
 //
@@ -232,32 +220,31 @@ public class PresenceWSHandler extends TextWebSocketHandler {
         String to = node.path("to").asText(null);
         boolean typing =  node.path("isTyping").asBoolean();
 
-        if (typing) armAutoStop(channelId, username, to);
+//        if (typing) armAutoStop(channelId, username, to);
 
         typingEventPublisher.publishTypingEvent(username ,to,channelId,
                    typing);
-
     }
 
 
-    private void armAutoStop(String channelId , String from ,String to){
-        String key = from + "|" + channelId;
-        var prev = autoStopTimer.get(key);
-
-        if(prev != null ) prev.cancel(false);
-
-
-        autoStopTimer.put(key , executorService.schedule(()->{
-            try {
-                typingEventPublisher.publishTypingEvent(from ,to,channelId,
-                        false);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
-            autoStopTimer.remove(key);
-
-        }, 3, TimeUnit.SECONDS));
-
-    }
+//    private void armAutoStop(String channelId , String from ,String to){
+//        String key = from + "|" + channelId;
+//        var prev = autoStopTimer.get(key);
+//
+//        if(prev != null ) prev.cancel(false);
+//
+//
+//        autoStopTimer.put(key , executorService.schedule(()->{
+//            try {
+//                typingEventPublisher.publishTypingEvent(from ,to,channelId,
+//                        false);
+//            } catch ( Exception e) {
+//                throw new RuntimeException(e.getMessage());
+//            }
+//            autoStopTimer.remove(key);
+//
+//        }, 3, TimeUnit.SECONDS));
+//
+//    }
 
 }

@@ -104,13 +104,9 @@ public class PrivateChannelServiceImpl {
     }
 
 
-    public List<PrivateChannelProfile> getAllChannelWithoutPagination(String userID) throws
-            UserDoesNotExist, IllegalArgumentException{
+    public List<PrivateChannelProfile> getAllChannelWithoutPagination(String userID) throws IllegalArgumentException{
 
         UUID uuidA = UUID.fromString(userID);
-
-
-//        User user = userService.getUserById(userID);
 
         List<PrivateChannel> privateChannels = privateChannelRepository.findAllChannelForUser(uuidA );
 
