@@ -95,7 +95,7 @@ public class GroupChannelServiceImpl {
                 redisTemplate.opsForSet().add(key, groupChannelIdsFromDb.toArray(new String[0]));
             }
             // FIX: Enforce a 12-hour expiration time to prevent memory leaks and clear stale data
-            redisTemplate.expire(key, Duration.ofHours(12));
+            redisTemplate.expire(key, Duration.ofHours(6));
         } catch (Exception e) {
             log.error("Failed to populate Redis cache for user groups: {}", userId, e);
         }

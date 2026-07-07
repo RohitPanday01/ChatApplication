@@ -35,40 +35,40 @@ public class KafkaTopicConfig {
 
     @Bean
     public NewTopic readReceiptTopic(){
-        return  new NewTopic(readReceipt,3 , (short) 1 );
+        return  new NewTopic(readReceipt,4 , (short) 1 );
     }
 
     @Bean
     public NewTopic interNodeReadReceiptTopic(){
-        return  new NewTopic(interNodeReadReceipt,3 , (short) 1 );
+        return  new NewTopic(interNodeReadReceipt,4 , (short) 1 );
     }
 
     @Bean
     public NewTopic dmNotifyTopic (){
-        return  new NewTopic(dmNotify,3 , (short) 1 );
+        return  new NewTopic(dmNotify,4 , (short) 1 );
     }
     @Bean
     public NewTopic groupMessageInterNodeTopic() {
-        return new NewTopic(groupMessageInterNode, 3, (short) 1);
+        return new NewTopic(groupMessageInterNode, 4, (short) 1);
     }
 
     @Bean
     public NewTopic groupDeliveryTopic() {
-        return new NewTopic(groupDelivery, 3, (short) 1);
+        return new NewTopic(groupDelivery, 4, (short) 1);
     }
 
     @Bean
     public NewTopic interNodeDmDeliveryTopic() {
-        return new NewTopic(interNodeDmDelivery, 3, (short) 1);
+        return new NewTopic(interNodeDmDelivery, 4, (short) 1);
     }
 
     @Bean
     public NewTopic dmDeliveryTopic() {
-        return new NewTopic(dmDelivery, 3, (short) 1);
+        return new NewTopic(dmDelivery, 4, (short) 1);
     }
 
     @Bean
     public NewTopic dmPersistTopic() {
-        return new NewTopic(dmPersist, 3, (short) 1);
+        return new NewTopic(dmPersist, 4, (short) 1);
     }
 }

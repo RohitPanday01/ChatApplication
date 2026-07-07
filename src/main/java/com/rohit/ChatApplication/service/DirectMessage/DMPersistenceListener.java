@@ -54,12 +54,9 @@ public class DMPersistenceListener {
 
             List<PrivateMessage> batches = new ArrayList<>();
             for(PrivateMessageDto messageDto : messages){
-
                Optional<PrivateMessage> message =
                        privateMessageService.toEntity(messageDto);
-
                message.ifPresent(batches::add);
-
             }
 
             if (!batches.isEmpty()) {

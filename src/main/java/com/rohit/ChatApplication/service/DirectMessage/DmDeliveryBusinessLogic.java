@@ -6,11 +6,13 @@ import com.rohit.ChatApplication.data.NotificationType;
 import com.rohit.ChatApplication.data.ReadReceipt;
 import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
+import com.rohit.ChatApplication.exception.KafkaDeliveryException;
 import com.rohit.ChatApplication.observability.metrics.KafkaMetrics;
 import com.rohit.ChatApplication.service.Notification.NotificationProducer;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptEmitService;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
 import com.rohit.ChatApplication.service.RegisterUserSession;
+import org.apache.kafka.common.KafkaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -77,9 +79,17 @@ public class DmDeliveryBusinessLogic {
 //                receiverName);
 
         String receiver = messageDto.getTo().getUsername();
+        String receiverNodeId = null;
 
-        String receiverNodeId =
-                (String) redisTemplate.opsForValue().get("nodeId:" + receiver);
+        try{
+             receiverNodeId =
+                    (String) redisTemplate.opsForValue().get("nodeId:" + receiver);
+
+        } catch (Exception e) {
+            log.error("Redis routing lookup failed for user: {}. Defaulting to offline routing.", receiver, e);
+            return;
+        }
+
 
         if (receiverNodeId == null) {
             handleOfflineUser(messageDto);
@@ -89,7 +99,7 @@ public class DmDeliveryBusinessLogic {
         if (nodeIdentity.getNodeId().equals(receiverNodeId)) {
             deliverToLocalSession(messageDto);
         }else {
-            interNodeDmDelivery(messageDto);
+            interNodeDmDelivery(messageDto , receiverNodeId);
         }
 
     }
@@ -110,14 +120,13 @@ public class DmDeliveryBusinessLogic {
             session.sendMessage(
                     new TextMessage(objectMapper.writeValueAsString(messageDto)));
 
-            log.info("Message delivered to {}", receiver);
+            log.info("Message successfully delivered to local WebSocket session for user: {}", receiver);
             sendReadReceipt(messageDto);
 
         } catch (Exception e) {
-
             log.error("WebSocket delivery failed", e);
+            handleOfflineUser(messageDto);
 
-            throw new RuntimeException("Delivery failed", e);
         }
     }
 
@@ -170,7 +179,7 @@ public class DmDeliveryBusinessLogic {
             sendNotification(messageDto);
         }catch(Exception e){
             log.error("Trying to send notification to notification producer failed messageId={}", messageDto.getId(), e);
-            throw new RuntimeException("trying to send notification to notification producer failed", e );
+
         }
     }
 
@@ -198,19 +207,14 @@ public class DmDeliveryBusinessLogic {
 
         } catch (Exception e) {
             log.error("Read Receipt Delivered event  failed messageId={}", messageDto.getId(), e);
-            throw new RuntimeException("Delivery Read Receipt failed", e);
         }
-
     }
 
-    public void interNodeDmDelivery(PrivateMessageDto messageDto){
+    public void interNodeDmDelivery(PrivateMessageDto messageDto , String receiverNodeId){
 
         String receiverName = messageDto.getTo().getUsername();
 
         try{
-            String receiverNodeId = (String) redisTemplate.opsForValue()
-                    .get("nodeId:" + receiverName);
-            log.info("->>>>>>>>user is online on other node; {} ", receiverNodeId);
 
             kafkaTemplate.send("inter-node-dm-delivery",
                     receiverNodeId, messageDto).join();
@@ -222,7 +226,7 @@ public class DmDeliveryBusinessLogic {
 
             log.error("Inter-node delivery failed", e);
 
-            throw new RuntimeException("Inter-node delivery failed", e);
+            throw new KafkaDeliveryException("Inter-node delivery failed", e);
         }
 
     }
