@@ -44,8 +44,8 @@ public class DMPersistenceListener {
     }
 
     @KafkaListener(
-            topics = "${chat.topics.dm-persist}",
-            groupId = "dm-persistence-svc",
+            topics = "${chat.topics.dm-delivery}",
+            groupId = "dm-persistence-cg",
             containerFactory = "persistContainerFactory"
     )
     public  void onMessage(@Payload List<PrivateMessageDto> messages , Acknowledgment ack) {
