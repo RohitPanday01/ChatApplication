@@ -35,7 +35,7 @@ public class GroupMessageConsumer {
 
     @KafkaListener(
             topics = "${chat.topics.group-delivery}",
-            groupId = "group-message-consumerGroup",
+            groupId = "group-message-cg",
             containerFactory = "GroupMessageDeliveryContainer"
     )
     public void onMessage(ConsumerRecord<String, GroupMessageDto> record, Acknowledgment ack){

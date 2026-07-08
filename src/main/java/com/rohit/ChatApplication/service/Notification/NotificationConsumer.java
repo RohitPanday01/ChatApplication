@@ -32,7 +32,7 @@ public class NotificationConsumer {
 
     @KafkaListener(
             topics = "${chat.topics.dm-notify}",
-            groupId = "notification-group",
+            groupId = "notification-cg",
             containerFactory = "notificationContainerFactory"
     )
     public  void onMessage(NotificationEvent event , Acknowledgment ack){

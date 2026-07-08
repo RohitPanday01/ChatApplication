@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
@@ -115,26 +116,32 @@ public class KafkaConfig {
     private String generateUniqueInstanceId() {
         try {
             // Extracts the network name of your EC2 instance (e.g., ip-10-0-1-45)
-            String hostName = InetAddress.getLocalHost().getHostName();
-            return "chat-app-" + hostName;
+            return InetAddress.getLocalHost().getHostName();
+
         } catch (UnknownHostException e) {
             // Fallback to a random unique identifier if network resolution fails
-            return "chat-delivery-fallback-" + UUID.randomUUID();
+            return "chat-app-" + UUID.randomUUID();
         }
     }
 
 
-    public <T> ConsumerFactory<String, T> deliveryConsumerFactory(Class<T> targetType) {
-        String uniqueInstanceId = generateUniqueInstanceId();
+    public <T> ConsumerFactory<String, T> consumerFactory(Class<T> targetType, String functionalGroupId){
+        String hostIp = generateUniqueInstanceId();
+
         Map<String, Object > props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, uniqueInstanceId);
         props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 300000);
         props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 45000);
         props.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 15000);
         props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, functionalGroupId );
+        // GROUP_INSTANCE_ID_CONFIG use it as a static instance ID
+        // to prevent rebalances when restarting the monolith container
+        props.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, functionalGroupId + "-" + hostIp);
+
+
 
         JsonDeserializer<T> deserializer = new JsonDeserializer<>(targetType);
         deserializer.addTrustedPackages("*");
@@ -159,8 +166,8 @@ public class KafkaConfig {
     public ConcurrentKafkaListenerContainerFactory<String, PrivateMessageDto > deliveryFactory(DefaultErrorHandler errorHandler){
         ConcurrentKafkaListenerContainerFactory<String, PrivateMessageDto> factory = new ConcurrentKafkaListenerContainerFactory<>();
 
-        factory.setConsumerFactory(deliveryConsumerFactory(PrivateMessageDto.class ));
-        factory.setConcurrency(3);
+        factory.setConsumerFactory(consumerFactory(PrivateMessageDto.class, "private-message-cg" ));
+        factory.setConcurrency(2);
         factory.setCommonErrorHandler(errorHandler);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;
@@ -172,8 +179,8 @@ public class KafkaConfig {
             GroupMessageDto > GroupMessageDeliveryFactory(DefaultErrorHandler errorHandler){
 
         ConcurrentKafkaListenerContainerFactory<String , GroupMessageDto> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(deliveryConsumerFactory(GroupMessageDto.class));
-        factory.setConcurrency(3);
+        factory.setConsumerFactory(consumerFactory(GroupMessageDto.class , "group-message-cg"));
+        factory.setConcurrency(2);
         factory.setCommonErrorHandler(errorHandler);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;
@@ -183,7 +190,7 @@ public class KafkaConfig {
     @Bean(name = "notificationContainerFactory")
     public ConcurrentKafkaListenerContainerFactory<String , NotificationEvent> notificationFactory(DefaultErrorHandler errorHandler){
         ConcurrentKafkaListenerContainerFactory<String ,NotificationEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(deliveryConsumerFactory(NotificationEvent.class ));
+        factory.setConsumerFactory(consumerFactory(NotificationEvent.class ,"notification-cg" ));
         factory.setCommonErrorHandler(errorHandler);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;
@@ -192,7 +199,7 @@ public class KafkaConfig {
     @Bean(name = "readReceiptContainerFactory")
     public ConcurrentKafkaListenerContainerFactory<String , ReadReceipt> readReceiptFactory(DefaultErrorHandler errorHandler){
         ConcurrentKafkaListenerContainerFactory<String ,ReadReceipt> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(deliveryConsumerFactory(ReadReceipt.class));
+        factory.setConsumerFactory(consumerFactory(ReadReceipt.class ,"readReceipt-cg"));
         factory.setCommonErrorHandler(errorHandler);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;

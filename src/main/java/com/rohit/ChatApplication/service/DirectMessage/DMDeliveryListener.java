@@ -33,7 +33,7 @@ public class DMDeliveryListener {
 
     @KafkaListener(
             topics = "${chat.topics.dm-delivery}",
-            groupId = "private-message-group",
+            groupId = "private-message-cg",
             containerFactory = "deliveryContainerFactory"
     )
     public void onMessage(@Payload PrivateMessageDto messageDto,

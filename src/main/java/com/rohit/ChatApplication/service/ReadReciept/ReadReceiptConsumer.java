@@ -37,7 +37,7 @@ public class ReadReceiptConsumer {
     }
     @KafkaListener(
             topics = "${chat.topics.read-receipt}",
-            groupId = "readReceipt-group",
+            groupId = "readReceipt-cg",
             containerFactory = "readReceiptContainerFactory"
     )
     public void onMessage(ReadReceipt readReceipt , Acknowledgment ack)  {
