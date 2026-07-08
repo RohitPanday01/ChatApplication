@@ -136,15 +136,13 @@ public class KafkaConfig {
         props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 300000);
         props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 45000);
         props.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 15000);
-        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 50);
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 10);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, functionalGroupId );
         // GROUP_INSTANCE_ID_CONFIG use it as a static instance ID
         // to prevent rebalances when restarting the monolith container
         props.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, functionalGroupId + "-" + hostIp);
-
-
 
         JsonDeserializer<T> deserializer = new JsonDeserializer<>(targetType);
         deserializer.addTrustedPackages("*");
@@ -161,7 +159,13 @@ public class KafkaConfig {
         factory.setCommonErrorHandler(errorHandler);
         factory.setBatchListener(true);
         factory.setConcurrency(2);
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
+        // Disable virtual threads by using the default platform thread executor
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("kafka-container-persist");
+        executor.setVirtualThreads(false); // This ensures platform threads are used
+
+        factory.getContainerProperties().setListenerTaskExecutor(executor);
+
         return factory;
     }
 
@@ -172,7 +176,12 @@ public class KafkaConfig {
         factory.setConsumerFactory(consumerFactory(PrivateMessageDto.class, "private-message-cg" ));
         factory.setConcurrency(2);
         factory.setCommonErrorHandler(errorHandler);
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
+        // Disable virtual threads by using the default platform thread executor
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("kafka-container-dmDelivery");
+        executor.setVirtualThreads(false); // This ensures platform threads are used
+
+        factory.getContainerProperties().setListenerTaskExecutor(executor);
         return factory;
     }
 
@@ -185,7 +194,12 @@ public class KafkaConfig {
         factory.setConsumerFactory(consumerFactory(GroupMessageDto.class , "group-message-cg"));
         factory.setConcurrency(2);
         factory.setCommonErrorHandler(errorHandler);
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
+        // Disable virtual threads by using the default platform thread executor
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("kafka-container-groupMessage");
+        executor.setVirtualThreads(false); // This ensures platform threads are used
+
+        factory.getContainerProperties().setListenerTaskExecutor(executor);
         return factory;
 
     }
@@ -195,7 +209,12 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String ,NotificationEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory(NotificationEvent.class ,"notification-cg" ));
         factory.setCommonErrorHandler(errorHandler);
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
+        // Disable virtual threads by using the default platform thread executor
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("kafka-container-notification");
+        executor.setVirtualThreads(false); // This ensures platform threads are used
+
+        factory.getContainerProperties().setListenerTaskExecutor(executor);
         return factory;
     }
 
@@ -204,7 +223,12 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String ,ReadReceipt> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory(ReadReceipt.class ,"readReceipt-cg"));
         factory.setCommonErrorHandler(errorHandler);
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
+        // Disable virtual threads by using the default platform thread executor
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("kafka-container-readReciept");
+        executor.setVirtualThreads(false); // This ensures platform threads are used
+
+        factory.getContainerProperties().setListenerTaskExecutor(executor);
         return factory;
     }
 
