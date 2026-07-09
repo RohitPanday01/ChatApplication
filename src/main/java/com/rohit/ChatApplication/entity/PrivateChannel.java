@@ -114,13 +114,14 @@ public class PrivateChannel extends  TimeStampBase {
 //        lastMessage = message;
     }
 
-    public PrivateMessage addMessage(User from ,MessageType messageType, String content, long messageSeq ) throws InvalidOperation{
+    public PrivateMessage addMessage(User from , User to , MessageType messageType, String content, long messageSeq )
+            throws InvalidOperation{
         if (!user1.getUserId().equals(from.getUserId())
                 && !user2.getUserId().equals(from.getUserId())) {
             throw new InvalidOperation("sender can't send message in this channel");
         }
 
-        PrivateMessage privateMessage = new PrivateMessage(null,this, from, anotherMember(from) ,
+        PrivateMessage privateMessage = new PrivateMessage(null,this, from, to ,
                 messageType , content, messageSeq );
         
         messages.add(privateMessage);

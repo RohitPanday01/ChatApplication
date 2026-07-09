@@ -9,6 +9,7 @@ import com.rohit.ChatApplication.entity.User;
 import com.rohit.ChatApplication.exception.ChannelDoesNotExist;
 import com.rohit.ChatApplication.exception.InvalidOperation;
 import com.rohit.ChatApplication.exception.UserDoesNotExist;
+import com.rohit.ChatApplication.repository.UserRepo;
 import com.rohit.ChatApplication.repository.channel.PrivateChannelRepository;
 import com.rohit.ChatApplication.repository.message.PrivateMessageRepository;
 import com.rohit.ChatApplication.service.MessageSequencing.SnowFlakeIdGenerator;
@@ -35,18 +36,20 @@ public class PrivateMessageServiceImpl{
     private final PrivateMessageRepository privateMessageRepository;
     private final PrivateChannelRepository privateChannelRepository;
     private final SnowFlakeIdGenerator snowFlakeIdGenerator;
+    private final UserRepo userRepo;
 
 
     public PrivateMessageServiceImpl(
             UsersDetailsServiceImpl usersDetailsService,
             PrivateChannelRepository privateChannelRepository,
             PrivateMessageRepository privateMessageRepository ,
-            SnowFlakeIdGenerator snowFlakeIdGenerator) {
+            SnowFlakeIdGenerator snowFlakeIdGenerator, UserRepo userRepo) {
 
         this.usersDetailsService = usersDetailsService;
         this.privateMessageRepository = privateMessageRepository;
         this.privateChannelRepository = privateChannelRepository;
         this.snowFlakeIdGenerator = snowFlakeIdGenerator;
+        this.userRepo = userRepo;
 
     }
 
@@ -60,17 +63,21 @@ public class PrivateMessageServiceImpl{
     }
 
 
-    public Optional<PrivateMessage> toEntity(PrivateMessageDto messageDto)
+    public PrivateMessage toEntity(PrivateMessageDto messageDto)
             throws ChannelDoesNotExist, UserDoesNotExist {
 
 
-            PrivateChannel channel = getChannelById(messageDto.getChannel());
-            User from = usersDetailsService.getUserById(messageDto.getFrom().getId());
-            User to = channel.anotherMember(from);
+//            PrivateChannel channel = getChannelById(messageDto.getChannel());
+//            User from = usersDetailsService.getUserById(messageDto.getFrom().getId());
+//            User to = channel.anotherMember(from);
+
+           PrivateChannel privateChannel = privateChannelRepository.getReferenceById(messageDto.getId());
+           User from = userRepo.getReferenceById(UUID.fromString(messageDto.getFrom().getId()));
+           User to =  userRepo.getReferenceById(UUID.fromString(messageDto.getFrom().getId()));
 
             PrivateMessage message = new PrivateMessage(
                     messageDto.getId(),
-                    channel,
+                    privateChannel,
                     from,
                     to,
                     messageDto.getMessageType(),
@@ -78,26 +85,29 @@ public class PrivateMessageServiceImpl{
                     messageDto.getMessage_seq()
             );
 
-            return Optional.of(message);
-
+            return message;
 
     }
 
 
 
     public PrivateMessageDto createMessage(String fromUserId ,
+                                           String toUserId,
                                            String channelId,
                                            String Content ,
                                            MessageType messageType)
             throws UserDoesNotExist, ChannelDoesNotExist, InvalidOperation {
 
 
-            UUID channelUUID = UUID.fromString(channelId);
-            User user = usersDetailsService.getUserById(fromUserId);
-
-            PrivateChannel privateChannel = getChannelById(channelUUID);
+//            UUID channelUUID = UUID.fromString(channelId);
+//            User user = usersDetailsService.getUserById(fromUserId);
+//
+//            PrivateChannel privateChannel = getChannelById(channelUUID);
+            PrivateChannel privateChannel = privateChannelRepository.getReferenceById(UUID.fromString(channelId));
+            User from = userRepo.getReferenceById(UUID.fromString(fromUserId));
+            User to =  userRepo.getReferenceById(UUID.fromString(toUserId));
             long messageSeq = snowFlakeIdGenerator.generateId();
-            PrivateMessage privateMessage = privateChannel.addMessage(user,messageType, Content , messageSeq);
+            PrivateMessage privateMessage = privateChannel.addMessage(from, to, messageType, Content , messageSeq);
 
 //            privateChannelRepository.saveAndFlush(privateChannel);
             return new PrivateMessageDto(privateMessage);
@@ -140,8 +150,8 @@ public class PrivateMessageServiceImpl{
 
         Pageable pageable = PageRequest.of(pageRequest.getPageNumber(), pageRequest.getPageSize(),
                 Sort.by("message_seq").descending() );
-        User user = usersDetailsService.getUserById(userId);
-        PrivateChannel channel = getChannelById(channelUUID);
+        User user = userRepo.getReferenceById(UUID.fromString(userId));
+        PrivateChannel channel = privateChannelRepository.getReferenceById(channelUUID);
         if (channel.getUser1() != user ||  channel.getUser2() != user )
             throw new InvalidOperation("user is not in members of the channel !");
 
