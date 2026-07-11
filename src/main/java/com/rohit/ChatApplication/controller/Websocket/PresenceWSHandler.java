@@ -29,6 +29,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.util.Collections;
@@ -96,13 +97,16 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
        String username = (String) session.getAttributes().get("username");
        String userId = (String) session.getAttributes().get("userid");
+
+       WebSocketSession safeSession =
+               new ConcurrentWebSocketSessionDecorator(session , 1000, 1024 *64);
 //        session.getAttributes().put("userid", userId);
 //       session.getAttributes().put("username", username);
 
        String thisServerNodeId = nodeIdentity.getNodeId();
 
        redisTemplate.opsForValue().set("nodeId:"+username , thisServerNodeId);
-       registerUserSession.registerUserSessionInLocalNodeMap(username, session, userId);
+       registerUserSession.registerUserSessionInLocalNodeMap(username, safeSession, userId);
 
        try{
            subscriptionManager.subscribeUserChannels(userId);
@@ -112,7 +116,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
            for(String id : groupChannelProfiles ){
 
-               registerUserSession.registerUserSessionsInTheirGroups(id, session);
+               registerUserSession.registerUserSessionsInTheirGroups(id, safeSession);
                if(registerUserSession.getUserSessionsInTheirGroups(id).size() == 1){
                    subscriptionManager.subscribeGroup(id);
                }
@@ -125,7 +129,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
        }catch (Exception e) {
 
            log.error("Critical failure during subscription infrastructure hydration for user: {}", username, e);
-           session.close(CloseStatus.SERVER_ERROR.withReason("Subscription synchronization failed"));
+           safeSession.close(CloseStatus.SERVER_ERROR.withReason("Subscription synchronization failed"));
        }
 
     }
@@ -170,7 +174,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
             WebSocketSession storedSession = registerUserSession.getUserSessionInLocalNodeMap(username);
             if (storedSession != null && storedSession.getId().equals(sessionId)) {
-                registerUserSession.unregisterUserSessionInLocalNodeMap(username , session );
+                registerUserSession.unregisterUserSessionInLocalNodeMap(username , storedSession );
                 subscriptionManager.unsubscribeUserChannels(userId);
             }
 
@@ -187,7 +191,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
             for(String id : groupChannelProfiles ){
 
                 Set<WebSocketSession> sessions =
-                        registerUserSession.unregisterUserSessionInTheirGroups(id ,session);
+                        registerUserSession.unregisterUserSessionInTheirGroups(id ,storedSession);
 
                 if (sessions.isEmpty()) {
                     subscriptionManager.unsubscribeGroup(id );

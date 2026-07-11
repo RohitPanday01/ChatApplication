@@ -189,8 +189,6 @@ public class PrivateChannelController {
     //        privateMessageDto.setIngressTimestampNanos(System.currentTimeMillis());
 
 
-
-                // synchronous send (waits until producer sends)
                 directMessageProducer.sendDirectMessage(privateMessageDto);
                 return ResponseEntity.ok("Message Sent");
         } catch (ChannelDoesNotExist | InvalidOperation | UserDoesNotExist e) {

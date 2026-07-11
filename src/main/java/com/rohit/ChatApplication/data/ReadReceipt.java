@@ -1,21 +1,34 @@
 package com.rohit.ChatApplication.data;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class ReadReceipt {
-    private String eventId;
-    private String messageId;
-    private String channelId;
-    private String sender;
-    private ReceiptType type;
-    private String receiver;
-    private Instant timestamp;
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record ReadReceipt(
+        String eventId,
+        String messageId,
+        String channelId,
+        String sender,
+        ReceiptType type,
+        String receiver,
+        Instant timestamp // Kept as Instant object
+) {
+    // Compact Constructor for input validation
+    public ReadReceipt {
+        if (messageId == null || type == null) {
+            throw new IllegalArgumentException("MessageId and ReceiptType cannot be null");
+        }
+    }
+
+    // Overloaded constructor for quick instantiation
+    public ReadReceipt(String eventId, String messageId, String channelId, String sender, ReceiptType type, String receiver) {
+        this(eventId, messageId, channelId, sender, type, receiver, Instant.now());
+    }
+
 
 }

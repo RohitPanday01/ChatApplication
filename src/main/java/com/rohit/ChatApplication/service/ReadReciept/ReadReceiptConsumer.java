@@ -43,7 +43,7 @@ public class ReadReceiptConsumer {
     public void onMessage(ReadReceipt readReceipt , Acknowledgment ack)  {
 
         try{
-            WebSocketSession session = registerUserSession.getUserSessionInLocalNodeMap(readReceipt.getSender());
+            WebSocketSession session = registerUserSession.getUserSessionInLocalNodeMap(readReceipt.sender());
 
             log.info("->>>>>>>>>>inside ReadReceipt consumer user session we fetched is: {}", session);
 
@@ -60,13 +60,13 @@ public class ReadReceiptConsumer {
                 }
             }else{
 
-                kafkaTemplate.send("chat.topics.inter-node-read-receipt", readReceipt.getSender() , readReceipt)
+                kafkaTemplate.send("chat.topics.inter-node-read-receipt", readReceipt.sender() , readReceipt)
                         .whenComplete((result ,ex)->{
                             if(ex == null){
                                 ack.acknowledge();
                             }else{
 
-                                log.error("failed to send to interNode topic {}, will retry", readReceipt.getMessageId() , ex);
+                                log.error("failed to send to interNode topic {}, will retry", readReceipt.sender() , ex);
                                 throw new RuntimeException(ex.getMessage());
                             }
                         });
