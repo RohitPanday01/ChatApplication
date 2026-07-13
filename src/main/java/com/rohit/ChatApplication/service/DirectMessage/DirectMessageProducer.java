@@ -83,7 +83,7 @@ public class DirectMessageProducer {
                                new ReadReceipt(null , messageSeq , dto.getChannel().toString(), senderId,
                                        ReceiptType.SENT, dto.getTo().getUsername() );
 
-                       WebSocketSession session  = registerUserSession.getUserSessionInLocalNodeMap(dto.getFrom().getUsername());
+                       WebSocketSession session = registerUserSession.getUserSessionInLocalNodeMap(dto.getFrom().getUsername());
 
                         if (session != null && session.isOpen()) {
                             try{
@@ -110,14 +110,14 @@ public class DirectMessageProducer {
                             cause instanceof NetworkException ||
                             cause instanceof NotEnoughReplicasException) {
 
-                        logger.error("[INFRA_FAILURE] Kafka tracking failed for message ID: {}. Evacuating to local NVMe disk.", failedId, cause);
+                        logger.error("[INFRA_FAILURE] Kafka tracking failed for message ID: {} and senderName: {} . Evacuating to local NVMe disk.", failedId, senderId, cause);
 
                         // Stash to local RocksDB or file system. Do NOT notify client; let client-side sync/timer handle it.
                     }
 
                     // CATEGORY 3: Structural Violations / Poison Pills
                     else if (cause instanceof RecordTooLargeException || cause instanceof InvalidTopicException) {
-                        logger.error("[POISON_PILL] Message ID: {} rejected due to structural configuration violation.", failedId, cause);
+                        logger.error("[POISON_PILL] Message ID: {} and senderName: {} rejected due to structural configuration violation.", failedId, senderId, cause);
 
 
 
@@ -133,7 +133,7 @@ public class DirectMessageProducer {
 
                     // CATCH-ALL: Unexpected Runtime Anomalies
                     else {
-                        logger.error("[UNKNOWN_PRODUCER_ERROR] Message ID: {} encountered untriaged failure.", failedId, cause);
+                        logger.error("[UNKNOWN_PRODUCER_ERROR] Message ID: {} and senderName:{} encountered untriaged failure.", failedId, senderId, cause);
 
                     }
 
