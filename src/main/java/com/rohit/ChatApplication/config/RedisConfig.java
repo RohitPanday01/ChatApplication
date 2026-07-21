@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.SocketOptions;
 import io.lettuce.core.StatefulRedisConnectionImpl;
@@ -156,7 +158,7 @@ public class RedisConfig {
 
 
 
-    @Bean(name = "redisCrudConnectionFactory")
+    @Bean(name = "redisCrudTemplate")
     public RedisTemplate<String, Object> redisTemplate
             (@Qualifier("redisCrudConnectionFactory")LettuceConnectionFactory connectionFactory,
                                                        ObjectMapper objectMapper){
@@ -175,7 +177,7 @@ public class RedisConfig {
         return template;
     }
 
-    @Bean(name = "chatPubSubConnectionFactory")
+    @Bean(name = "chatPubSubTemplate")
     public RedisTemplate<String, Object> redisChatTemplate
             (@Qualifier("chatPubSubConnectionFactory")LettuceConnectionFactory connectionFactory,
              ObjectMapper objectMapper){
@@ -194,7 +196,7 @@ public class RedisConfig {
         return template;
     }
 
-    @Bean(name = "typingIndicatorConnectionFactory")
+    @Bean(name = "typingIndicatorTemplate")
     public RedisTemplate<String, Object> redisTypingTemplate
             (@Qualifier("typingIndicatorConnectionFactory")LettuceConnectionFactory connectionFactory,
              ObjectMapper objectMapper){
@@ -215,7 +217,7 @@ public class RedisConfig {
 
     @Bean(name = "redisStringTemplate")
     public RedisTemplate<String, String> redisStringTemplate(
-            @Qualifier("redisConnectionFactory")LettuceConnectionFactory connectionFactory) {
+            @Qualifier("redisCrudConnectionFactory")LettuceConnectionFactory connectionFactory) {
         RedisTemplate<String, String> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(RedisSerializer.string());
@@ -226,13 +228,22 @@ public class RedisConfig {
         return template;
     }
 
-    @Bean
+    @Bean(name = "typingIndicatorMessageListener")
     RedisMessageListenerContainer redisMessageListenerContainer(
-            @Qualifier("redisConnectionFactory") LettuceConnectionFactory  connectionFactory ){
+            @Qualifier("typingIndicatorConnectionFactory") LettuceConnectionFactory  connectionFactory ){
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        container.setTaskExecutor(new VirtualThreadTaskExecutor("redis-pubsub-worker-"));
+        container.setTaskExecutor(new VirtualThreadTaskExecutor("redis-typing-pubsub-"));
         return container;
+    }
+
+    @Bean
+    public Cache<String, String> userLocationL1Cache() {
+        return Caffeine.newBuilder()
+                .maximumSize(50_000)                   // Capped at ~10MB RAM footprint
+                .expireAfterWrite(Duration.ofSeconds(10)) // 10s TTL automatically handles node migration
+                .recordStats()                          // Enables cache hit/miss metrics tracking
+                .build();
     }
 
 

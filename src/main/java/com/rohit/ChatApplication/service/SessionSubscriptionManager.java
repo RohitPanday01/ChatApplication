@@ -153,6 +153,14 @@ public class SessionSubscriptionManager {
 
     }
 
+    public void subscribeUserTypingChannel(String nodeId){
+        channelSubscriberForTyping.subscribePrivateChannel(nodeId);
+    }
+
+    public void unsubscribeUserTypingChannel(String userName){
+        channelSubscriberForTyping.unsubscribePrivateChannel(userName);
+    }
+
     public void subscribeGroup(String groupId) {
         channelSubscriberForTyping.subscribeGroup(groupId);
     }

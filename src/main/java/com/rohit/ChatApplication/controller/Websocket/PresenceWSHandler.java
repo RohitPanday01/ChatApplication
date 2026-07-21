@@ -109,7 +109,10 @@ public class PresenceWSHandler extends TextWebSocketHandler {
        registerUserSession.registerUserSessionInLocalNodeMap(username, safeSession, userId);
 
        try{
-           subscriptionManager.subscribeUserChannels(userId);
+
+           if(registerUserSession.getUserSessionInLocalNodeMapSize() == 1){
+               subscriptionManager.subscribeUserTypingChannel(thisServerNodeId);
+           }
 
            Set<String> groupChannelProfiles =  groupChannelService.findAllGroupsForUser(userId);
            groupChannelsForUser.put(username, groupChannelProfiles);
@@ -175,7 +178,9 @@ public class PresenceWSHandler extends TextWebSocketHandler {
             WebSocketSession storedSession = registerUserSession.getUserSessionInLocalNodeMap(username);
             if (storedSession != null && storedSession.getId().equals(sessionId)) {
                 registerUserSession.unregisterUserSessionInLocalNodeMap(username , storedSession );
-                subscriptionManager.unsubscribeUserChannels(userId);
+                if(registerUserSession.getUserSessionInLocalNodeMapSize() == 0){
+                    subscriptionManager.unsubscribeUserTypingChannel(userId);
+                }
             }
 
 //            String nodeID = (String) redisTemplate.opsForValue().get("nodeId:"+ username);
@@ -183,8 +188,6 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 //            if(nodeIdentity.getNodeId().equals(nodeID)){
 //                redisTemplate.delete("nodeId:"+ username);
 //            }
-
-
             Set<String> groupChannelProfiles = groupChannelsForUser
                     .getOrDefault(username , Collections.emptySet() );
 

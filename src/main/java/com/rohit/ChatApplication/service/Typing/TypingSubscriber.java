@@ -8,6 +8,7 @@ import com.rohit.ChatApplication.service.RegisterUserSession;
 import com.rohit.ChatApplication.service.RegisterUserSessionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
@@ -35,8 +36,10 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
     private final ConcurrentMap<String , MessageListener> groupListeners = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, MessageListener> privateChannelListeners = new ConcurrentHashMap<>();
 
-    public TypingSubscriber(ObjectMapper objectMapper, RedisMessageListenerContainer container,
-                            RegisterUserSessionManager registerUserSessionManager, RedisTemplate<String , Object> redisTemplate){
+    public TypingSubscriber(ObjectMapper objectMapper,
+                            @Qualifier("typingIndicatorMessageListener") RedisMessageListenerContainer container,
+                            RegisterUserSessionManager registerUserSessionManager,
+                            @Qualifier("typingIndicatorTemplate") RedisTemplate<String , Object> redisTemplate){
         this.objectMapper = objectMapper;
         this.container = container;
         this.registerUserSessionManager = registerUserSessionManager;
@@ -44,17 +47,18 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
     }
 
     @Override
-    public void subscribePrivateChannel(String channelId){
+    public void subscribePrivateChannel(String nodeId){
 
-        privateChannelListeners.computeIfAbsent(channelId, id -> {
+        privateChannelListeners.computeIfAbsent(nodeId, user -> {
 
-            String redisChannel = "direct:" + id + ":typing";
+            String redisChannel =  "typing:"+nodeId ;
 
             MessageListener listener = (message, pattern) -> {
 
                 try {
                     TypingEvent event = (TypingEvent) redisTemplate.getValueSerializer().deserialize(message.getBody());
 
+                    assert event != null;
                     WebSocketSession session = registerUserSessionManager.getUserSessionInLocalNodeMap(event.getTo());
 
                     if (session != null && session.isOpen()) {
@@ -121,9 +125,9 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
     }
 
     @Override
-    public void unsubscribePrivateChannel(String channelId){
+    public void unsubscribePrivateChannel(String username){
 
-        MessageListener listener = privateChannelListeners.remove(channelId);
+        MessageListener listener = privateChannelListeners.remove(username);
 
         if (listener != null) {
 

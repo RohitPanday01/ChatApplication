@@ -31,6 +31,10 @@ public class RegisterUserSession implements RegisterUserSessionManager {
 
     }
 
+    public int getUserSessionInLocalNodeMapSize(){
+        return this.userSessions.size();
+    }
+
     @Override
     public WebSocketSession getUserSessionInLocalNodeMap(String username) {
         return userSessions.getOrDefault(username , null);
