@@ -157,8 +157,8 @@ public class SessionSubscriptionManager {
         channelSubscriberForTyping.subscribePrivateChannel(nodeId);
     }
 
-    public void unsubscribeUserTypingChannel(String userName){
-        channelSubscriberForTyping.unsubscribePrivateChannel(userName);
+    public void unsubscribeUserTypingChannel(String nodeId){
+        channelSubscriberForTyping.unsubscribePrivateChannel(nodeId);
     }
 
     public void subscribeGroup(String groupId) {

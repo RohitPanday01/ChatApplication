@@ -1,12 +1,8 @@
 package com.rohit.ChatApplication.service.Typing;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rohit.ChatApplication.controller.Websocket.PresenceWSHandler;
 import com.rohit.ChatApplication.data.TypingEvent;
-import com.rohit.ChatApplication.service.RegisterUserSession;
 import com.rohit.ChatApplication.service.RegisterUserSessionManager;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.MessageListener;
@@ -17,8 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -56,10 +50,13 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
             MessageListener listener = (message, pattern) -> {
 
                 try {
-                    TypingEvent event = (TypingEvent) redisTemplate.getValueSerializer().deserialize(message.getBody());
 
-                    assert event != null;
-                    WebSocketSession session = registerUserSessionManager.getUserSessionInLocalNodeMap(event.getTo());
+                    TypingEvent event =
+                            objectMapper.readValue(message.getBody() , TypingEvent.class);
+
+
+                    WebSocketSession session =
+                            registerUserSessionManager.getUserSessionInLocalNodeMap(event.getTo());
 
                     if (session != null && session.isOpen()) {
                         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
@@ -89,9 +86,7 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
 
                 try {
 
-                    TypingEvent event =
-                            (TypingEvent) redisTemplate.getValueSerializer().deserialize(message.getBody());
-
+                    TypingEvent event =  objectMapper.readValue(message.getBody() , TypingEvent.class);
                     Set<WebSocketSession> sessions =
                             registerUserSessionManager.getUserSessionsInTheirGroups(id);
 
@@ -125,9 +120,9 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
     }
 
     @Override
-    public void unsubscribePrivateChannel(String username){
+    public void unsubscribePrivateChannel(String nodeID){
 
-        MessageListener listener = privateChannelListeners.remove(username);
+        MessageListener listener = privateChannelListeners.remove(nodeID);
 
         if (listener != null) {
 

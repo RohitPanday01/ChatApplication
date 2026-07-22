@@ -4,8 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.rohit.ChatApplication.data.UserDetail;
-import com.rohit.ChatApplication.data.channel.profile.GroupChannelProfile;
+
 
 import com.rohit.ChatApplication.data.message.NodeIdentity;
 
@@ -16,7 +15,6 @@ import com.rohit.ChatApplication.service.Typing.TypingEventPublisher;
 import com.rohit.ChatApplication.service.UserPresence.PresencePublisher;
 import com.rohit.ChatApplication.service.channel.GroupChannelServiceImpl;
 
-import com.rohit.ChatApplication.util.AuthUtil;
 
 import lombok.NonNull;
 
@@ -24,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -32,6 +31,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -105,14 +106,15 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
        String thisServerNodeId = nodeIdentity.getNodeId();
 
-       redisTemplate.opsForValue().set("nodeId:"+username , thisServerNodeId);
-       registerUserSession.registerUserSessionInLocalNodeMap(username, safeSession, userId);
+//       redisTemplate.opsForValue().set("nodeId:"+username , thisServerNodeId);
+
 
        try{
+           registerUserSession.registerUserSessionInLocalNodeMap(username, safeSession, userId);
 
-           if(registerUserSession.getUserSessionInLocalNodeMapSize() == 1){
-               subscriptionManager.subscribeUserTypingChannel(thisServerNodeId);
-           }
+//           if(registerUserSession.getUserSessionInLocalNodeMapSize() == 1){
+//               subscriptionManager.subscribeUserTypingChannel(thisServerNodeId);
+//           }
 
            Set<String> groupChannelProfiles =  groupChannelService.findAllGroupsForUser(userId);
            groupChannelsForUser.put(username, groupChannelProfiles);
@@ -125,14 +127,40 @@ public class PresenceWSHandler extends TextWebSocketHandler {
                }
            }
 
-           redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
+//           redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
+
+
+           long now = Instant.now().toEpochMilli();
+           redisTemplate.executePipelined((RedisCallback<?>) connection -> {
+               byte[] nodeKey = ("nodeId:" + username).getBytes(StandardCharsets.UTF_8);
+               byte[] nodeValue = thisServerNodeId.getBytes(StandardCharsets.UTF_8);
+               byte[] zsetKey = "online_users_lastPing".getBytes(StandardCharsets.UTF_8);
+               byte[] userBytes = username.getBytes(StandardCharsets.UTF_8);
+
+               // Command 1: SET nodeId:username
+               connection.stringCommands().set(nodeKey, nodeValue);
+               // Command 2: ZADD online_users_lastPing
+               connection.zSetCommands().zAdd(zsetKey, now, userBytes);
+
+               return null;
+           });
            presencePublisher.publish(username , "online");
+
            log.info("->>>>>>>>> published user is Online to redis Stream publisher: {}", username);
 
        }catch (Exception e) {
 
-           log.error("Critical failure during subscription infrastructure hydration for user: {}", username, e);
-           safeSession.close(CloseStatus.SERVER_ERROR.withReason("Subscription synchronization failed"));
+               log.error("Critical failure during WS connection setup for user: {}. Initiating rollback...", username, e);
+
+               // ROLLBACK STATE ON FAILURE to prevent zombie registrations
+               try {
+                   registerUserSession.unregisterUserSessionInLocalNodeMap(username, session);
+                   redisTemplate.delete("nodeId:" + username);
+                   safeSession.close(CloseStatus.SERVER_ERROR.withReason("Connection hydration failed"));
+               } catch (Exception rollbackEx) {
+                   log.error("Error during connection failure rollback for user: {}", username, rollbackEx);
+               }
+
        }
 
     }
