@@ -130,7 +130,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 //           redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
 
 
-           long now = Instant.now().toEpochMilli();
+           long now = System.currentTimeMillis();
            redisTemplate.executePipelined((RedisCallback<?>) connection -> {
                byte[] nodeKey = ("nodeId:" + username).getBytes(StandardCharsets.UTF_8);
                byte[] nodeValue = thisServerNodeId.getBytes(StandardCharsets.UTF_8);
@@ -155,8 +155,8 @@ public class PresenceWSHandler extends TextWebSocketHandler {
                // ROLLBACK STATE ON FAILURE to prevent zombie registrations
                try {
                    registerUserSession.unregisterUserSessionInLocalNodeMap(username, session);
-                   redisTemplate.delete("nodeId:" + username);
                    safeSession.close(CloseStatus.SERVER_ERROR.withReason("Connection hydration failed"));
+                   redisTemplate.delete("nodeId:" + username);
                } catch (Exception rollbackEx) {
                    log.error("Error during connection failure rollback for user: {}", username, rollbackEx);
                }
@@ -203,11 +203,13 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
         try{
 
+            String thisServerNodeId = nodeIdentity.getNodeId();
+
             WebSocketSession storedSession = registerUserSession.getUserSessionInLocalNodeMap(username);
             if (storedSession != null && storedSession.getId().equals(sessionId)) {
                 registerUserSession.unregisterUserSessionInLocalNodeMap(username , storedSession );
                 if(registerUserSession.getUserSessionInLocalNodeMapSize() == 0){
-                    subscriptionManager.unsubscribeUserTypingChannel(userId);
+                    subscriptionManager.unsubscribeUserTypingChannel(thisServerNodeId);
                 }
             }
 

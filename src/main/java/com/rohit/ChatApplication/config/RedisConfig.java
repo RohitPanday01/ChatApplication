@@ -229,7 +229,7 @@ public class RedisConfig {
     }
 
     @Bean(name = "typingIndicatorMessageListener")
-    RedisMessageListenerContainer redisMessageListenerContainer(
+    public RedisMessageListenerContainer redisMessageListenerContainer(
             @Qualifier("typingIndicatorConnectionFactory") LettuceConnectionFactory  connectionFactory ){
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
