@@ -7,10 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import io.lettuce.core.ClientOptions;
-import io.lettuce.core.SocketOptions;
-import io.lettuce.core.StatefulRedisConnectionImpl;
-import io.lettuce.core.TimeoutOptions;
+import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.resource.ClientResources;
@@ -233,8 +230,18 @@ public class RedisConfig {
             @Qualifier("typingIndicatorConnectionFactory") LettuceConnectionFactory  connectionFactory ){
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        container.setTaskExecutor(new VirtualThreadTaskExecutor("redis-typing-pubsub-"));
+        container.setTaskExecutor(new VirtualThreadTaskExecutor("redis-typing-pubSub-"));
         return container;
+    }
+
+    @Bean
+    public RedisMessageListenerContainer redisChatMessageListenerContainer(
+            @Qualifier("chatPubSubConnectionFactory") LettuceConnectionFactory lettuceConnectionFactory){
+         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+         container.setConnectionFactory(lettuceConnectionFactory);
+         container.setTaskExecutor(new VirtualThreadTaskExecutor("redis-Dm-pubSub"));
+         return container;
+
     }
 
     @Bean
