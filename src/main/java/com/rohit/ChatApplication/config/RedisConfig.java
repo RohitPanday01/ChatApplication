@@ -234,7 +234,7 @@ public class RedisConfig {
         return container;
     }
 
-    @Bean
+    @Bean(name = "DmMessageListener")
     public RedisMessageListenerContainer redisChatMessageListenerContainer(
             @Qualifier("chatPubSubConnectionFactory") LettuceConnectionFactory lettuceConnectionFactory){
          RedisMessageListenerContainer container = new RedisMessageListenerContainer();

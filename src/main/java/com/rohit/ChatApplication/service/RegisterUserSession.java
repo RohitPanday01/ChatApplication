@@ -1,15 +1,8 @@
 package com.rohit.ChatApplication.service;
 
-import com.rohit.ChatApplication.data.SliceList;
-import com.rohit.ChatApplication.data.channel.profile.PrivateChannelProfile;
-import com.rohit.ChatApplication.exception.UserDoesNotExist;
-import com.rohit.ChatApplication.service.Typing.TypingSubscriber;
-import com.rohit.ChatApplication.service.channel.PrivateChannelServiceImpl;
-import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;

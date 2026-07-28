@@ -1,16 +1,12 @@
 package com.rohit.ChatApplication.service;
 
-import com.rohit.ChatApplication.data.SliceList;
 import com.rohit.ChatApplication.data.channel.profile.PrivateChannelProfile;
 import com.rohit.ChatApplication.exception.DatabaseRuntimeException;
-import com.rohit.ChatApplication.exception.UserDoesNotExist;
-import com.rohit.ChatApplication.service.Typing.ChannelSubscriberForTyping;
-import com.rohit.ChatApplication.service.Typing.TypingSubscriber;
+import com.rohit.ChatApplication.service.Typing.ChannelSubscriberForRedisPubSub;
 import com.rohit.ChatApplication.service.channel.PrivateChannelServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,8 +14,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,16 +21,19 @@ public class SessionSubscriptionManager {
     private final Logger log = LoggerFactory.getLogger(SessionSubscriptionManager.class);
     private static final String EMPTY_PLACEHOLDER = "_NONE_";
     private static final String REDIS_KEY_PREFIX = "user:channels:";
-    private final ChannelSubscriberForTyping channelSubscriberForTyping;
+    private final ChannelSubscriberForRedisPubSub typingSubscriber;
+    private final ChannelSubscriberForRedisPubSub DmSubscriber;
     private final PrivateChannelServiceImpl privateChannelService;
 
 
     private final RedisTemplate<String , String > redisTemplate;
 
-    public SessionSubscriptionManager(ChannelSubscriberForTyping channelSubscriberForTyping,
+    public SessionSubscriptionManager(@Qualifier("TypingSubscriberPubSub") ChannelSubscriberForRedisPubSub typingSubscriber,
+                                      @Qualifier("DmSubscriberPubSub") ChannelSubscriberForRedisPubSub DmSubscriber,
                                       PrivateChannelServiceImpl privateChannelService,
                                       @Qualifier("redisStringTemplate")RedisTemplate<String, String> redisTemplate) {
-       this.channelSubscriberForTyping = channelSubscriberForTyping;
+       this.typingSubscriber = typingSubscriber;
+       this.DmSubscriber = DmSubscriber;
         this.privateChannelService = privateChannelService;
         this.redisTemplate = redisTemplate;
     }
@@ -99,7 +96,7 @@ public class SessionSubscriptionManager {
         // 3. Local Node Pub/Sub Routing Subscriptions
         for (String channelId : channelIdsToSubscribe) {
             try {
-                channelSubscriberForTyping.subscribePrivateChannel(channelId);
+//                channelSubscriberForRedisPubSub.subscribePrivateChannel(channelId);
             } catch (Exception subEx) {
                 // Defensive Guardrail: If subscription to one channel topic fails,
                 // log it and continue so we don't abort the rest of the user's channels.
@@ -143,7 +140,7 @@ public class SessionSubscriptionManager {
         // 4. Safe Local Node Pub/Sub Unsubscriptions
         for (String channelId : channelIdsToUnsubscribe) {
             try {
-                channelSubscriberForTyping.unsubscribePrivateChannel(channelId);
+//                channelSubscriberForRedisPubSub.unsubscribePrivateChannel(channelId);
             } catch (Exception unsubEx) {
                 // Defensive Guardrail: If unregistering from one topic fails, log it and
                 // keep moving so the rest of the user's topics are cleanly closed out.
@@ -153,19 +150,24 @@ public class SessionSubscriptionManager {
 
     }
 
-    public void subscribeUserTypingChannel(String nodeId){
-        channelSubscriberForTyping.subscribePrivateChannel(nodeId);
+    public void subscribeUserTypingChannel(String nodeId) {
+
+            typingSubscriber.subscribePrivateChannel(nodeId);
+            DmSubscriber.subscribePrivateChannel(nodeId);
+
     }
 
     public void unsubscribeUserTypingChannel(String nodeId){
-        channelSubscriberForTyping.unsubscribePrivateChannel(nodeId);
+        typingSubscriber.unsubscribePrivateChannel(nodeId);
+        DmSubscriber.unsubscribePrivateChannel(nodeId);
+
     }
 
     public void subscribeGroup(String groupId) {
-        channelSubscriberForTyping.subscribeGroup(groupId);
+        typingSubscriber.subscribeGroup(groupId);
     }
 
     public void unsubscribeGroup(String groupId) {
-        channelSubscriberForTyping.unsubscribeGroup(groupId);
+        typingSubscriber.unsubscribeGroup(groupId);
     }
 }

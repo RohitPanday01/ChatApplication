@@ -18,9 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 
-@Component
+@Component("TypingSubscriberPubSub")
 @Slf4j
-public class TypingSubscriber implements ChannelSubscriberForTyping {
+public class TypingSubscriberPubSub implements ChannelSubscriberForRedisPubSub {
 
 
     private final ObjectMapper objectMapper;
@@ -30,10 +30,10 @@ public class TypingSubscriber implements ChannelSubscriberForTyping {
     private final ConcurrentMap<String , MessageListener> groupListeners = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, MessageListener> privateChannelListeners = new ConcurrentHashMap<>();
 
-    public TypingSubscriber(ObjectMapper objectMapper,
-                            @Qualifier("typingIndicatorMessageListener") RedisMessageListenerContainer container,
-                            RegisterUserSessionManager registerUserSessionManager,
-                            @Qualifier("typingIndicatorTemplate") RedisTemplate<String , Object> redisTemplate){
+    public TypingSubscriberPubSub(ObjectMapper objectMapper,
+                                  @Qualifier("typingIndicatorMessageListener") RedisMessageListenerContainer container,
+                                  RegisterUserSessionManager registerUserSessionManager,
+                                  @Qualifier("typingIndicatorTemplate") RedisTemplate<String , Object> redisTemplate){
         this.objectMapper = objectMapper;
         this.container = container;
         this.registerUserSessionManager = registerUserSessionManager;
