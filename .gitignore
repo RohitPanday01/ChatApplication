@@ -41,3 +41,4 @@ Deployment/prod/kafka/.env
 application.properties
 application.yml
 secrets.yml
+.venv/

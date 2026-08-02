@@ -105,6 +105,8 @@ networks:
 
 volumes:
   pgdata:
+    external: true
+    name: chatapplication_pgdata
   my-redis:
 
 
