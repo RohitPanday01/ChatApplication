@@ -159,8 +159,10 @@ public class PrivateChannelController {
             {
 
         try{
-            String senderId = AuthUtil.currentUserDetail().getId();
+            String senderId = request.getFrom().getId();
             String receiverId = request.getTo().getId();
+            String senderUsername = request.getFrom().getUsername();
+            String receiverUsername = request.getTo().getUsername();
 
 //            if (!(request.getFrom().getId()).equals(senderId)) {
 //                throw new InvalidOperation("Sender of this message is not same as LoggedIn User");
@@ -177,7 +179,9 @@ public class PrivateChannelController {
 
             PrivateMessageDto privateMessageDto = privateMessageService.createMessage(
                     senderId,
+                    senderUsername,
                     receiverId,
+                    receiverUsername,
                     request.getChannelId(),
                     request.getMessageContent(),
                     request.getMessageType()

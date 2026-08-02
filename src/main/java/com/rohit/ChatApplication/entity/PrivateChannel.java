@@ -102,26 +102,26 @@ public class PrivateChannel extends  TimeStampBase {
         return user1;
     }
 
-    public void  sendMessage(User messageSender , User messageReceiver , MessageType messageType , String content ,
-                             long messageSeq){
-        if(isBlocked()){
-            throw new IllegalStateException("Messaging is blocked in this chat.");
-        }
+//    public void  sendMessage(User messageSender , User messageReceiver , MessageType messageType , String content ,
+//                             long messageSeq){
+//        if(isBlocked()){
+//            throw new IllegalStateException("Messaging is blocked in this chat.");
+//        }
+//
+//        PrivateMessage message = new PrivateMessage(this , messageSender , messageReceiver ,messageType, content
+//        ,messageSeq);
+//        messages.add(message);
+////        lastMessage = message;
+//    }
 
-        PrivateMessage message = new PrivateMessage(null ,this , messageSender , messageReceiver ,messageType, content
-        ,messageSeq);
-        messages.add(message);
-//        lastMessage = message;
-    }
-
-    public PrivateMessage addMessage(User from , User to , MessageType messageType, String content, long messageSeq )
+    public PrivateMessage addMessage(User from , User to , MessageType messageType, String content, Long messageSeq )
             throws InvalidOperation{
         if (!user1.getUserId().equals(from.getUserId())
                 && !user2.getUserId().equals(from.getUserId())) {
             throw new InvalidOperation("sender can't send message in this channel");
         }
 
-        PrivateMessage privateMessage = new PrivateMessage(null,this, from, to ,
+        PrivateMessage privateMessage = new PrivateMessage(this, from, to ,
                 messageType , content, messageSeq );
         
         messages.add(privateMessage);

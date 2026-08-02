@@ -1,13 +1,9 @@
 package com.rohit.ChatApplication.Batch.Message.PrivateMessage;
 
-import com.rohit.ChatApplication.entity.PrivateChannel;
 import com.rohit.ChatApplication.entity.PrivateMessage;
 import com.rohit.ChatApplication.repository.channel.PrivateChannelRepository;
 import com.rohit.ChatApplication.repository.message.PrivateMessageRepository;
 import jakarta.transaction.Transactional;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -64,7 +60,7 @@ public class PrivateMessageBatcher {
         try{
             List<PrivateMessage> toSave = batch.stream()
                     .filter(message ->
-                            !messageRepository.existsByMessageSeq(message.getMessageSeq()))
+                            !messageRepository.existsByMessageIdMessageSeq(message.getMessageSeq()))
                     .toList();
             log.info("saving message to db: {}", toSave.size());
             if (!toSave.isEmpty()) {

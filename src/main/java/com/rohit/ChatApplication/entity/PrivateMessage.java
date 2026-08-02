@@ -2,6 +2,7 @@ package com.rohit.ChatApplication.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.Hibernate;
 import org.hibernate.annotations.BatchSize;
 
 import java.time.Instant;
@@ -19,10 +20,8 @@ public class PrivateMessage extends  TimeStampBase{
 
 
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "message_id")
-    private UUID messageId;
+    @EmbeddedId
+    private PrivateMessageId messageId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "from_user_id",  nullable = false)
@@ -33,15 +32,19 @@ public class PrivateMessage extends  TimeStampBase{
     private User to;
 
     @ManyToOne(fetch = FetchType.LAZY )
-    @JoinColumn(name = "private_channel_id",  nullable = false)
+    @JoinColumn(name = "private_channel_id", insertable = false, updatable = false)
     private PrivateChannel privateChannel;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 32, nullable = false)
     private MessageType messageType;
 
-    @Column(name = "message_seq", nullable = false)
-    private Long messageSeq;
+//    @Column(name = "message_seq", nullable = false)
+//    private Long messageSeq;
+
+
+    @Column(name = "prev_msg_seq")
+    private Long prevMsgSeq;
 
 
     @Column(name = "sent_at", nullable = false)
@@ -52,47 +55,63 @@ public class PrivateMessage extends  TimeStampBase{
 //    private Instant deliveredAt;
 
 
-
     @Column(columnDefinition = "Text", nullable = false)
     private String content;
 
 
 
-    public PrivateMessage(UUID messageId ,PrivateChannel privateChannel , User from , User to ,
-                          MessageType messageType, String content ,long messageSeq ){
-        if(Objects.equals(from, to)){
-            throw new IllegalArgumentException("From cannot Be Same as to ");
+    public PrivateMessage(PrivateChannel privateChannel , User from , User to ,
+                          MessageType messageType, String content ,Long messageSeq ){
+        if (Objects.equals(from, to)) {
+            throw new IllegalArgumentException("From user cannot be the same as To user");
         }
-        if(messageId == null) this.messageId = UUID.randomUUID();
+        if (privateChannel == null || privateChannel.getPrivateChannelId() == null) {
+            throw new IllegalArgumentException("PrivateChannel and its ID cannot be null");
+        }
+        if (messageSeq == null) {
+            throw new IllegalArgumentException("messageSeq (Snowflake ID) cannot be null");
+        }
+        this.messageId = new PrivateMessageId(privateChannel.getPrivateChannelId(), messageSeq);
         this.privateChannel = privateChannel;
         this.from = from;
         this.to = to;
         this.messageType = messageType;
         this.content =  content;
-        this.messageSeq = messageSeq;
-        this.sentAt = Instant.now();
+//        this.sentAt = Instant.now();
     }
 
+    // --- DELEGATOR GETTERS ---
+    public Long getMessageSeq() {
+        return this.messageId != null ? this.messageId.getMessageSeq() : null;
+    }
+
+    public UUID getChannelId() {
+        return this.messageId != null ? this.messageId.getPrivateChannelId() : null;
+    }
+
+    // --- SAFE EQUALS ---
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof PrivateMessage message)) return false;
-        if (!super.equals(o)) return false;
-        return Objects.equals(messageId, message.messageId);
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        PrivateMessage that = (PrivateMessage) o;
+        return getMessageId() != null && Objects.equals(getMessageId(), that.getMessageId());
     }
 
+    // --- SAFE HASHCODE ---
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), messageId);
+        return Objects.hash(getMessageId());
     }
 
+    // --- SAFE TOSTRING (Excludes LAZY entities: privateChannel, from, to) ---
     @Override
     public String toString() {
         return "PrivateMessage{" +
-                "from=" + from +
-                ", messageId=" + messageId +
-                ", to=" + to +
+                "messageId=" + messageId +
+                ", prevMsgSeq=" + prevMsgSeq +
                 ", messageType=" + messageType +
-                ", privateChannel=" + privateChannel +
+                ", sentAt=" + sentAt +
                 ", content='" + content + '\'' +
                 '}';
     }

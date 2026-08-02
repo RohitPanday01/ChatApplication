@@ -64,7 +64,7 @@ public class PrivateMessageServiceImpl{
 
 
     public PrivateMessage toEntity(PrivateMessageDto messageDto)
-            throws ChannelDoesNotExist, UserDoesNotExist {
+            throws ChannelDoesNotExist, UserDoesNotExist , IllegalArgumentException {
 
 
 //            PrivateChannel channel = getChannelById(messageDto.getChannel());
@@ -76,7 +76,6 @@ public class PrivateMessageServiceImpl{
            User to =  userRepo.getReferenceById(UUID.fromString(messageDto.getFrom().getId()));
 
             PrivateMessage message = new PrivateMessage(
-                    messageDto.getId(),
                     privateChannel,
                     from,
                     to,
@@ -92,7 +91,9 @@ public class PrivateMessageServiceImpl{
 
 
     public PrivateMessageDto createMessage(String fromUserId ,
+                                           String senderUsername,
                                            String toUserId,
+                                           String receiverUsername,
                                            String channelId,
                                            String Content ,
                                            MessageType messageType)
@@ -106,11 +107,11 @@ public class PrivateMessageServiceImpl{
             PrivateChannel privateChannel = privateChannelRepository.getReferenceById(UUID.fromString(channelId));
             User from = userRepo.getReferenceById(UUID.fromString(fromUserId));
             User to =  userRepo.getReferenceById(UUID.fromString(toUserId));
-            long messageSeq = snowFlakeIdGenerator.generateId();
-            PrivateMessage privateMessage = privateChannel.addMessage(from, to, messageType, Content , messageSeq);
+            Long messageSeq = snowFlakeIdGenerator.generateId();
+//            PrivateMessage privateMessage = new PrivateMessage(privateChannel, from, to, messageType, Content , messageSeq);
 
 //            privateChannelRepository.saveAndFlush(privateChannel);
-            return new PrivateMessageDto(privateMessage);
+            return new PrivateMessageDto(privateChannel, from, senderUsername, to, receiverUsername, messageType, Content , messageSeq);
 
 
 

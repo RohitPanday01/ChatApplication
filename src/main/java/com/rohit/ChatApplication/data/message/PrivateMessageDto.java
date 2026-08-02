@@ -3,12 +3,15 @@ package com.rohit.ChatApplication.data.message;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.rohit.ChatApplication.data.UserPublicProfile;
 import com.rohit.ChatApplication.entity.MessageType;
+import com.rohit.ChatApplication.entity.PrivateChannel;
 import com.rohit.ChatApplication.entity.PrivateMessage;
+import com.rohit.ChatApplication.entity.User;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.jackson.Jacksonized;
 
+import java.time.Instant;
 import java.util.UUID;
 
 
@@ -35,25 +38,44 @@ public class PrivateMessageDto   {
     private long ingressTimestampNanos;
 
 
-    public PrivateMessageDto (PrivateMessage message){
-        this.id  = message.getMessageId();
-        this.message_seq = message.getMessageSeq();
-        this.channel = message.getPrivateChannel().getPrivateChannelId();
-        this.messageType = message.getMessageType();
+    public PrivateMessageDto (PrivateChannel privateChannel, User from,
+                              String senderUsername,  User to, String receiverUsername, MessageType messageType,
+                              String content , Long messageSeq){
+        this.message_seq = messageSeq;
+        this.channel = privateChannel.getPrivateChannelId();
+        this.messageType = messageType;
         this.from = UserPublicProfile.builder()
-                        .id(message.getFrom().getUserId().toString())
-                        .username(message.getFrom().getUsername())
+                        .id(from.getUserId().toString())
+                        .username(senderUsername)
                         .build();
         this.to = UserPublicProfile.builder()
-                 .id(message.getTo().getUserId().toString())
-                  .username(message.getTo().getUsername())
+                 .id(to.getUserId().toString())
+                  .username(receiverUsername)
                   .build();
-        this.content = message.getContent();
-        this.sentAt =  message.getSentAt().toString();
-        this.ingressTimestampNanos = message.getSentAt().toEpochMilli();
+        this.content = content;
+        this.sentAt = Instant.now().toString();
+        this.ingressTimestampNanos = Instant.now().toEpochMilli();
 
     }
 
 
+
+         public PrivateMessageDto (PrivateMessage message){
+
+            this.message_seq  = message.getMessageId().getMessageSeq();
+            this.channel = message.getMessageId().getPrivateChannelId();
+            this.messageType = message.getMessageType();
+            this.from = UserPublicProfile.builder()
+                    .id(message.getFrom().getUserId().toString())
+                    .username(message.getFrom().getUsername())
+                    .build();
+            this.to = UserPublicProfile.builder()
+                    .id(message.getTo().getUserId().toString())
+                    .username(message.getTo().getUsername())
+                    .build();
+            this.content = message.getContent();
+            this.sentAt =  message.getSentAt().toString();
+
+        }
 
 }

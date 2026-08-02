@@ -5,6 +5,7 @@ import com.rohit.ChatApplication.data.channel.profile.PrivateChannelProfile;
 import com.rohit.ChatApplication.exception.ChannelDoesNotExist;
 import com.rohit.ChatApplication.exception.InvalidOperation;
 import com.rohit.ChatApplication.exception.UserDoesNotExist;
+import com.rohit.ChatApplication.repository.UserRepo;
 import com.rohit.ChatApplication.repository.channel.PrivateChannelRepository;
 import com.rohit.ChatApplication.entity.PrivateChannel;
 import com.rohit.ChatApplication.entity.User;
@@ -30,11 +31,13 @@ public class PrivateChannelServiceImpl {
 
     private final UsersDetailsServiceImpl userService;
     private final PrivateChannelRepository privateChannelRepository;
+    private final UserRepo userRepo;
 
     public PrivateChannelServiceImpl(UsersDetailsServiceImpl userService,
-                                     PrivateChannelRepository privateChannelRepository) {
+                                     PrivateChannelRepository privateChannelRepository, UserRepo userRepo) {
         this.userService = userService;
         this.privateChannelRepository = privateChannelRepository;
+        this.userRepo = userRepo;
     }
 
     private PrivateChannel getChannelById(UUID channelId) throws ChannelDoesNotExist  {
@@ -61,8 +64,8 @@ public class PrivateChannelServiceImpl {
         UUID uuidB = UUID.fromString(toUserId);
 
 
-        User userA = userService.getUserById(fromUserId);
-        User userB = userService.getUserById(toUserId);
+        User userA = userRepo.getReferenceById(uuidA);
+        User userB = userRepo.getReferenceById(uuidB);
 
 
 //        if (uuidA.compareTo(uuidB) > 0) {
@@ -76,7 +79,7 @@ public class PrivateChannelServiceImpl {
         }
 
         PrivateChannel channel = new PrivateChannel(userA, userB);
-        privateChannelRepository.saveAndFlush(channel);
+        privateChannelRepository.save(channel);
 
         return new PrivateChannelProfile(channel);
     }
@@ -116,7 +119,7 @@ public class PrivateChannelServiceImpl {
 
     }
 
-    @Transactional
+
     public PrivateChannelProfile getChannelProfile(String channelId , String userId) throws
              ChannelDoesNotExist , InvalidOperation {
         UUID userUuid , channelUuid ;
@@ -126,7 +129,7 @@ public class PrivateChannelServiceImpl {
 
 //        User user = userService.getUserById(userId);
 
-        PrivateChannel channel = getChannelById(channelUuid);
+        PrivateChannel channel = privateChannelRepository.getReferenceById(channelUuid);
 
         if(channel == null ){
             throw new ChannelDoesNotExist("channel does not exist for " + channelId);
@@ -154,7 +157,7 @@ public class PrivateChannelServiceImpl {
 
         User user = userService.getUserById(userId);
 
-        PrivateChannel channel = getChannelById(channelUuid);
+        PrivateChannel channel = privateChannelRepository.getReferenceById(channelUuid);
         if (channel.getUser1().getUserId() != userUuid
                 || channel.getUser2().getUserId() != userUuid)
             throw new InvalidOperation("user is not in members of the channel !");
