@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.List;
+
 
 @Service
 public class DmDeliveryBusinessLogic {
@@ -60,23 +62,6 @@ public class DmDeliveryBusinessLogic {
     public void handle(PrivateMessageDto messageDto)  {
 
 
-//        String receiverId = messageDto.getTo().getId();
-//        String channelId = messageDto.getChannel().toString();
-//        String dedupKey = String.format("Delivered%s", channelId);
-//
-//        long added = redisTemplate.opsForSet().add(dedupKey,
-//                messageDto.getId().toString());
-//        log.info("---->>>>>>>>>added dedupe info in DM " +
-//                "delivery Listerner {} ", added);
-//
-//        redisTemplate.expire(dedupKey , Duration.ofMinutes(2));
-//
-//        redisTemplate.opsForValue().setIfPresent(dedupKey ,  messageDto.getId().toString() , Duration.ofMinutes(2));
-
-//        boolean isOnline = isUserOnline(receiverName);
-//
-//        log.info(" ->>>>>>>>>>>user is Online will try to  send message ,{}",
-//                receiverName);
 
         String receiver = messageDto.getTo().getUsername();
         String receiverNodeId = null;

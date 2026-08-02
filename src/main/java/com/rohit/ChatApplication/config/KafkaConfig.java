@@ -177,6 +177,7 @@ public class KafkaConfig {
         factory.setConsumerFactory(consumerFactory(PrivateMessageDto.class, "private-message-cg" ));
         factory.setConcurrency(2);
         factory.setCommonErrorHandler(errorHandler);
+        factory.setBatchListener(true);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
         // Disable virtual threads by using the default platform thread executor
         SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("kafka-container-dmDelivery");

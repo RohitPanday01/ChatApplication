@@ -22,6 +22,8 @@ public class PrivateMessageDto   {
 
     protected  long message_seq;
 
+    protected long prevMessage_seq;
+
     protected MessageType messageType;
 
     protected UserPublicProfile from;

@@ -14,7 +14,10 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
+import java.util.concurrent.*;
+
+
 
 
 @Component
@@ -46,7 +49,7 @@ public class DMDeliveryListener {
             kafkaMetrics.incrementConsumerSuccess();
 
         } catch (Exception e) {
-            log.error("Delivery failed messageId={}", messageDto.getId(), e);
+            log.error("Delivery failed messageId={}", messageDto, e);
             kafkaMetrics.incrementConsumerFailure();
             throw e;
         }finally {
