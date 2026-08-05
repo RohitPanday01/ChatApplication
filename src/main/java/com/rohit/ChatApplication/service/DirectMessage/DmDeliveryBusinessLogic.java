@@ -8,6 +8,8 @@ import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
 import com.rohit.ChatApplication.exception.KafkaDeliveryException;
 import com.rohit.ChatApplication.observability.metrics.KafkaMetrics;
+import com.rohit.ChatApplication.service.CaffeineCacheResolver;
+import com.rohit.ChatApplication.service.MessageSequencing.SnowFlakeIdGenerator;
 import com.rohit.ChatApplication.service.Notification.NotificationProducer;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptEmitService;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
@@ -15,6 +17,7 @@ import com.rohit.ChatApplication.service.RegisterUserSession;
 import org.apache.kafka.common.KafkaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.interceptor.CacheResolver;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -38,6 +41,8 @@ public class DmDeliveryBusinessLogic {
     private final NotificationProducer notificationProducer;
     private final ReadReceiptEmitService readReceiptEmitService;
     private final KafkaMetrics kafkaMetrics;
+    private final SnowFlakeIdGenerator snowFlakeIdGenerator;
+    private final CaffeineCacheResolver caffeineCacheResolver;
 
     public DmDeliveryBusinessLogic(RedisTemplate<String , Object> redisTemplate,
                               KafkaTemplate<String, Object> kafkaTemplate,
@@ -45,7 +50,9 @@ public class DmDeliveryBusinessLogic {
                               ObjectMapper objectMapper,
                               NotificationProducer notificationProducer,
                               ReadReceiptProducer readReceiptProducer,NodeIdentity nodeIdentity,
-                                   ReadReceiptEmitService readReceiptEmitService , KafkaMetrics kafkaMetrics){
+                                   ReadReceiptEmitService readReceiptEmitService , KafkaMetrics kafkaMetrics,
+                                   SnowFlakeIdGenerator snowFlakeIdGenerator,
+                                   CaffeineCacheResolver caffeineCacheResolver){
         this.redisTemplate = redisTemplate ;
         this.kafkaTemplate = kafkaTemplate;
         this.registerUserSession = registerUserSession;
@@ -55,37 +62,53 @@ public class DmDeliveryBusinessLogic {
         this.nodeIdentity = nodeIdentity;
         this.readReceiptEmitService = readReceiptEmitService;
         this.kafkaMetrics = kafkaMetrics;
+        this.snowFlakeIdGenerator = snowFlakeIdGenerator;
+        this.caffeineCacheResolver = caffeineCacheResolver;
     }
 
 
 
-    public void handle(PrivateMessageDto messageDto)  {
+    public void handle(List<PrivateMessageDto> messages)  {
 
 
 
-        String receiver = messageDto.getTo().getUsername();
-        String receiverNodeId = null;
+        for(PrivateMessageDto message : messages){
+            Long messageSeq = snowFlakeIdGenerator.generateId();
+            message.setMessage_seq(messageSeq);
 
-        try{
-             receiverNodeId =
-                    (String) redisTemplate.opsForValue().get("nodeId:" + receiver);
+           Long prevMessageSeq =
+                   caffeineCacheResolver.handlePrevMessageSeq(message.getChannel() ,messageSeq);
 
-        } catch (Exception e) {
-            log.error("Redis routing lookup failed for user: {}. Defaulting to offline routing.", receiver, e);
-            return;
+           message.setPrevMessage_seq(prevMessageSeq);
+
+
+
         }
 
 
-        if (receiverNodeId == null) {
-            handleOfflineUser(messageDto);
-            return;
-        }
-
-        if (nodeIdentity.getNodeId().equals(receiverNodeId)) {
-            deliverToLocalSession(messageDto);
-        }else {
-            interNodeDmDelivery(messageDto , receiverNodeId);
-        }
+//        String receiver = messageDtos.getTo().getUsername();
+//        String receiverNodeId = null;
+//
+//        try{
+//             receiverNodeId =
+//                    (String) redisTemplate.opsForValue().get("nodeId:" + receiver);
+//
+//        } catch (Exception e) {
+//            log.error("Redis routing lookup failed for user: {}. Defaulting to offline routing.", receiver, e);
+//            return;
+//        }
+//
+//
+//        if (receiverNodeId == null) {
+//            handleOfflineUser(messageDto);
+//            return;
+//        }
+//
+//        if (nodeIdentity.getNodeId().equals(receiverNodeId)) {
+//            deliverToLocalSession(messageDto);
+//        }else {
+//            interNodeDmDelivery(messageDto , receiverNodeId);
+//        }
 
     }
 

@@ -39,12 +39,12 @@ public class DMDeliveryListener {
             groupId = "private-message-cg",
             containerFactory = "deliveryContainerFactory"
     )
-    public void onMessage(@Payload PrivateMessageDto messageDto,
+    public void onMessage(@Payload List<PrivateMessageDto> messageDto,
                           Acknowledgment ack) {
         long start = Instant.now().toEpochMilli();
 
         try{
-            dmDelivery.handle(messageDto);
+            dmDelivery.handle( messageDto);
             ack.acknowledge();
             kafkaMetrics.incrementConsumerSuccess();
 

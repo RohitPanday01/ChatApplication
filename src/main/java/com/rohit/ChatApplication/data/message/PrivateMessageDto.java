@@ -23,9 +23,9 @@ public class PrivateMessageDto   {
 
     protected UUID channel;
 
-    protected  long message_seq;
+    protected  Long message_seq;
 
-    protected long prevMessage_seq;
+    protected Long prevMessage_seq;
 
     protected MessageType messageType;
 
@@ -40,8 +40,8 @@ public class PrivateMessageDto   {
 
     public PrivateMessageDto (PrivateChannel privateChannel, User from,
                               String senderUsername,  User to, String receiverUsername, MessageType messageType,
-                              String content , Long messageSeq){
-        this.message_seq = messageSeq;
+                              String content ){
+
         this.channel = privateChannel.getPrivateChannelId();
         this.messageType = messageType;
         this.from = UserPublicProfile.builder()

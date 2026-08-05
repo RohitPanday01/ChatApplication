@@ -107,11 +107,11 @@ public class PrivateMessageServiceImpl{
             PrivateChannel privateChannel = privateChannelRepository.getReferenceById(UUID.fromString(channelId));
             User from = userRepo.getReferenceById(UUID.fromString(fromUserId));
             User to =  userRepo.getReferenceById(UUID.fromString(toUserId));
-            Long messageSeq = snowFlakeIdGenerator.generateId();
+
 //            PrivateMessage privateMessage = new PrivateMessage(privateChannel, from, to, messageType, Content , messageSeq);
 
 //            privateChannelRepository.saveAndFlush(privateChannel);
-            return new PrivateMessageDto(privateChannel, from, senderUsername, to, receiverUsername, messageType, Content , messageSeq);
+            return new PrivateMessageDto(privateChannel, from, senderUsername, to, receiverUsername, messageType, Content );
 
 
 

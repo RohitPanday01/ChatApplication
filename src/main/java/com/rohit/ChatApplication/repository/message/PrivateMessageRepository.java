@@ -36,11 +36,17 @@ public interface PrivateMessageRepository extends JpaRepository<PrivateMessage ,
     Slice<PrivateMessage> getAllByChannel(@Param("channelId") UUID channelId, Pageable pageable);
 
     @Query("""
-            SELECT MAX(p.messageSeq)
+            SELECT MAX(p.messageId.messageSeq)
             FROM PrivateMessage p
             WHERE p.messageID.privateChannelId = :channelId
             """)
     Long findMessageSeqByChannelId(@Param("channelId") UUID channelId);
+
+    @Query("""
+            SELECT MAX(p.prevMsgSeq) FROM PrivateMessage p
+            WHERE p.messageId.privateChannelId = :channelId
+            """)
+    Long findLatestSeq(@Param("channelId") UUID channelId);
 
 
 
