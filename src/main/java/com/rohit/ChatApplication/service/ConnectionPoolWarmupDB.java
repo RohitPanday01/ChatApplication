@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 @Component
 public class ConnectionPoolWarmupDB implements ApplicationListener<ApplicationReadyEvent> {
     private final DataSource dataSource;
-
+    
     public ConnectionPoolWarmupDB(DataSource dataSource) {
         this.dataSource = dataSource;
     }

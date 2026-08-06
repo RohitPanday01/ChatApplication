@@ -8,29 +8,33 @@ import com.rohit.ChatApplication.data.message.NodeIdentity;
 import com.rohit.ChatApplication.data.message.PrivateMessageDto;
 import com.rohit.ChatApplication.exception.KafkaDeliveryException;
 import com.rohit.ChatApplication.observability.metrics.KafkaMetrics;
+import com.rohit.ChatApplication.repository.channel.PrivateMessageJdbcRepository;
 import com.rohit.ChatApplication.service.CaffeineCacheResolver;
 import com.rohit.ChatApplication.service.MessageSequencing.SnowFlakeIdGenerator;
 import com.rohit.ChatApplication.service.Notification.NotificationProducer;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptEmitService;
 import com.rohit.ChatApplication.service.ReadReciept.ReadReceiptProducer;
 import com.rohit.ChatApplication.service.RegisterUserSession;
+import com.rohit.ChatApplication.service.UserRoutingService;
 import org.apache.kafka.common.KafkaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.interceptor.CacheResolver;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.List;
+import java.util.*;
 
 
 @Service
 public class DmDeliveryBusinessLogic {
 
-    private final Logger log = LoggerFactory.getLogger(DMDeliveryListener.class);
+    private final Logger log = LoggerFactory.getLogger(DmDeliveryBusinessLogic.class);
 
     private final RedisTemplate<String , Object> redisTemplate;
     private final KafkaTemplate<String, Object > kafkaTemplate;
@@ -43,8 +47,10 @@ public class DmDeliveryBusinessLogic {
     private final KafkaMetrics kafkaMetrics;
     private final SnowFlakeIdGenerator snowFlakeIdGenerator;
     private final CaffeineCacheResolver caffeineCacheResolver;
+    private final PrivateMessageJdbcRepository privateMessageJdbcRepository;
+    private final UserRoutingService userRoutingService;
 
-    public DmDeliveryBusinessLogic(RedisTemplate<String , Object> redisTemplate,
+    public DmDeliveryBusinessLogic(@Qualifier("chatPubSubTemplate") RedisTemplate<String , Object> redisTemplate,
                               KafkaTemplate<String, Object> kafkaTemplate,
                               RegisterUserSession registerUserSession,
                               ObjectMapper objectMapper,
@@ -52,7 +58,9 @@ public class DmDeliveryBusinessLogic {
                               ReadReceiptProducer readReceiptProducer,NodeIdentity nodeIdentity,
                                    ReadReceiptEmitService readReceiptEmitService , KafkaMetrics kafkaMetrics,
                                    SnowFlakeIdGenerator snowFlakeIdGenerator,
-                                   CaffeineCacheResolver caffeineCacheResolver){
+                                   CaffeineCacheResolver caffeineCacheResolver,
+                                   PrivateMessageJdbcRepository privateMessageJdbcRepository,
+                                   UserRoutingService userRoutingService){
         this.redisTemplate = redisTemplate ;
         this.kafkaTemplate = kafkaTemplate;
         this.registerUserSession = registerUserSession;
@@ -64,6 +72,8 @@ public class DmDeliveryBusinessLogic {
         this.kafkaMetrics = kafkaMetrics;
         this.snowFlakeIdGenerator = snowFlakeIdGenerator;
         this.caffeineCacheResolver = caffeineCacheResolver;
+        this.privateMessageJdbcRepository = privateMessageJdbcRepository;
+        this.userRoutingService = userRoutingService;
     }
 
 
@@ -71,7 +81,7 @@ public class DmDeliveryBusinessLogic {
     public void handle(List<PrivateMessageDto> messages)  {
 
 
-
+       Map<String, String > targetNodeIdsForUser = new HashMap<>();
         for(PrivateMessageDto message : messages){
             Long messageSeq = snowFlakeIdGenerator.generateId();
             message.setMessage_seq(messageSeq);
@@ -80,11 +90,38 @@ public class DmDeliveryBusinessLogic {
                    caffeineCacheResolver.handlePrevMessageSeq(message.getChannel() ,messageSeq);
 
            message.setPrevMessage_seq(prevMessageSeq);
+           String nodeId = userRoutingService.getUserLocation(message.getTo().getUsername());
 
-
+           if(nodeId != null){
+               targetNodeIdsForUser.put(message.getTo().getUsername(), nodeId);
+           }
 
         }
 
+        privateMessageJdbcRepository.consumeBatch(messages);
+        log.debug("Successfully batch-inserted {} records to Database.", messages.size());
+
+        String currentServerNodeId = nodeIdentity.getNodeId();
+        List<PrivateMessageDto> localDeliveries = new ArrayList<>();
+        Map<String, List<PrivateMessageDto>> remoteNodeMap = new HashMap<>();
+
+        for(PrivateMessageDto messageDto : messages){
+           String receiverUsername =  messageDto.getTo().getUsername();
+           String nodeId = targetNodeIdsForUser.get(receiverUsername);
+
+           if(nodeId == null ){
+               handleOfflineUser(messageDto);
+           }
+
+           if(currentServerNodeId.equals(nodeId)){
+               localDeliveries.add(messageDto);
+           }else{
+               remoteNodeMap.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(messageDto);
+           }
+        }
+        deliverToLocalSession(localDeliveries);
+
+        pipelineRedisPubSub(remoteNodeMap);
 
 //        String receiver = messageDtos.getTo().getUsername();
 //        String receiverNodeId = null;
@@ -112,29 +149,59 @@ public class DmDeliveryBusinessLogic {
 
     }
 
-    private void deliverToLocalSession(PrivateMessageDto messageDto) {
+    private void deliverToLocalSession(List<PrivateMessageDto> messages) {
 
-        String receiver = messageDto.getTo().getUsername();
-        WebSocketSession session =
-                registerUserSession.getUserSessionInLocalNodeMap(receiver);
+        for(PrivateMessageDto messageDto : messages){
 
-        if (session == null || !session.isOpen()) {
-            handleOfflineUser(messageDto);
-            return;
+            String receiver = messageDto.getTo().getUsername();
+            WebSocketSession session =
+                    registerUserSession.getUserSessionInLocalNodeMap(receiver);
+
+            if (session == null || !session.isOpen()) {
+                handleOfflineUser(messageDto);
+                return;
+            }
+
+            try{
+
+                session.sendMessage(
+                        new TextMessage(objectMapper.writeValueAsString(messageDto)));
+
+                log.info("Message successfully delivered to local WebSocket session for user: {}", receiver);
+                sendReadReceipt(messageDto);
+
+            } catch (Exception e) {
+                log.error("WebSocket delivery failed", e);
+                handleOfflineUser(messageDto);
+
+            }
+
         }
 
-        try{
+    }
 
-            session.sendMessage(
-                    new TextMessage(objectMapper.writeValueAsString(messageDto)));
+    private void pipelineRedisPubSub(Map<String, List<PrivateMessageDto>> remoteNodeMap) {
+        if (remoteNodeMap.isEmpty()) return;
 
-            log.info("Message successfully delivered to local WebSocket session for user: {}", receiver);
-            sendReadReceipt(messageDto);
+        try {
+            redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                for (Map.Entry<String, List<PrivateMessageDto>> entry : remoteNodeMap.entrySet()) {
+                    String targetNodeId = entry.getKey();
+                    byte[] topicBytes = ("Dm:"+ targetNodeId).getBytes();
 
+                    for (PrivateMessageDto dto : entry.getValue()) {
+                        try {
+                            byte[] payload = objectMapper.writeValueAsBytes(dto);
+                            connection.publish(topicBytes, payload);
+                        } catch (Exception e) {
+                            log.error("Failed to serialize messageId: {} for Redis Pub/Sub", dto.getId(), e);
+                        }
+                    }
+                }
+                return null;
+            });
         } catch (Exception e) {
-            log.error("WebSocket delivery failed", e);
-            handleOfflineUser(messageDto);
-
+            log.error("Error executing Redis Pub/Sub pipeline", e);
         }
     }
 

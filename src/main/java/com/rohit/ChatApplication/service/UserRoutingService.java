@@ -40,6 +40,7 @@ public class UserRoutingService {
         // 2. CACHE MISS / EXPIRED -> FALLBACK TO REDIS (1ms Network Round-Trip)
         log.debug("L1 Cache Miss for user {}. Fetching from Redis...", username);
         nodeId = (String)redisCrudTemplate.opsForValue().get("nodeId:" + username);
+        log.debug("L1 Cache Miss for user {}. Fetched from Redis {}", username,nodeId);
 
         // 3. REPOPULATE L1 CACHE IF USER IS ONLINE
         if (nodeId != null) {
