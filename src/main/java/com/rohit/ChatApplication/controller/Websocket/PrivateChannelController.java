@@ -12,6 +12,7 @@ import com.rohit.ChatApplication.entity.User;
 import com.rohit.ChatApplication.exception.ChannelDoesNotExist;
 import com.rohit.ChatApplication.exception.InvalidOperation;
 import com.rohit.ChatApplication.exception.UserDoesNotExist;
+import com.rohit.ChatApplication.repository.message.ChatSyncRepository;
 import com.rohit.ChatApplication.service.DirectMessage.DMDeliveryListener;
 import com.rohit.ChatApplication.service.DirectMessage.DirectMessageProducer;
 import com.rohit.ChatApplication.service.GroupMessage.FanOutService;
@@ -21,6 +22,7 @@ import com.rohit.ChatApplication.util.AuthUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
@@ -46,17 +48,20 @@ public class PrivateChannelController {
     private final PrivateMessageServiceImpl privateMessageService;
 
     private DirectMessageProducer directMessageProducer;
+    private ChatSyncRepository chatSyncRepository;
 
 
     @Autowired
     public PrivateChannelController(
             RedisTemplate<String, Object> redisTemplate,
             PrivateChannelServiceImpl privateChannelService,
-            PrivateMessageServiceImpl privateMessageService, DirectMessageProducer directMessageProducer) {
+            PrivateMessageServiceImpl privateMessageService, DirectMessageProducer directMessageProducer,
+            ChatSyncRepository chatSyncRepository) {
         this.redisTemplate = redisTemplate;
         this.privateChannelService = privateChannelService;
         this.privateMessageService = privateMessageService;
         this.directMessageProducer = directMessageProducer;
+        this.chatSyncRepository = chatSyncRepository;
     }
 
     @GetMapping(path = "{channelId}/profile")
@@ -182,7 +187,7 @@ public class PrivateChannelController {
                     senderUsername,
                     receiverId,
                     receiverUsername,
-                    request.getChannelId(),
+                    channelId,
                     request.getMessageContent(),
                     request.getMessageType()
             );
@@ -202,6 +207,29 @@ public class PrivateChannelController {
 
 //        messageProducer.sendDirectMessage(dm); // fire & forget
 //        return ResponseEntity.accepted().body("Message sending...");
+
+    }
+
+    @GetMapping("/sync")
+    public ResponseEntity<?> syncMessages(
+            @RequestParam("channelId") String channelId,
+            @RequestParam("afterMessageId") long afterMessageId,
+            @RequestParam(value = "limit", defaultValue = "50") int limit) {
+
+        // 1. Security Check: Prevent massive DB pull requests
+        int safeLimit = Math.min(limit, 100);
+
+        try{
+            // 2. Fast Path DB Fetch
+            List<PrivateMessageDto> missingMessages =
+                    chatSyncRepository.fetchMessagesAfter(channelId, afterMessageId, safeLimit);
+
+            // 3. Return 200 OK with the array of messages
+            return ResponseEntity.ok(missingMessages);
+        }catch (DataAccessException e){
+            return new ResponseEntity<>
+                    (new ErrorMessageResponse(e.getMessage()), HttpStatus.NOT_FOUND);
+        }
 
     }
 

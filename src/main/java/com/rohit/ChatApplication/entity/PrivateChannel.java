@@ -43,8 +43,8 @@ public class PrivateChannel extends  TimeStampBase {
     @JoinColumn(name = "user2_id")
     private User user2;
 
-    @OneToMany( mappedBy = "privateChannel",cascade = CascadeType.ALL, orphanRemoval = true )
-    private List<PrivateMessage> messages;
+//    @OneToMany( mappedBy = "privateChannel",cascade = CascadeType.ALL, orphanRemoval = true )
+//    private List<PrivateMessage> messages;
 
 //    @OneToOne
 //    @JoinColumn(name = "last_message_id")
@@ -124,7 +124,7 @@ public class PrivateChannel extends  TimeStampBase {
         PrivateMessage privateMessage = new PrivateMessage(this, from, to ,
                 messageType , content, messageSeq );
         
-        messages.add(privateMessage);
+//        messages.add(privateMessage);
 //        lastMessage = privateMessage;
 
         return privateMessage;
@@ -148,7 +148,6 @@ public class PrivateChannel extends  TimeStampBase {
                 "privateChannelId=" + privateChannelId +
                 ", user1=" + user1 +
                 ", user2=" + user2 +
-                ", messages=" + messages +
                 ", user1BlockedUser2=" + user1BlockedUser2 +
                 ", user2BlockedUser1=" + user2BlockedUser1 +
                 '}';

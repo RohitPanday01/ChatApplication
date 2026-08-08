@@ -122,30 +122,6 @@ public class DmDeliveryBusinessLogic {
 
         pipelineRedisPubSub(remoteNodeMap);
 
-//        String receiver = messageDtos.getTo().getUsername();
-//        String receiverNodeId = null;
-//
-//        try{
-//             receiverNodeId =
-//                    (String) redisTemplate.opsForValue().get("nodeId:" + receiver);
-//
-//        } catch (Exception e) {
-//            log.error("Redis routing lookup failed for user: {}. Defaulting to offline routing.", receiver, e);
-//            return;
-//        }
-//
-//
-//        if (receiverNodeId == null) {
-//            handleOfflineUser(messageDto);
-//            return;
-//        }
-//
-//        if (nodeIdentity.getNodeId().equals(receiverNodeId)) {
-//            deliverToLocalSession(messageDto);
-//        }else {
-//            interNodeDmDelivery(messageDto , receiverNodeId);
-//        }
-
     }
 
 
@@ -175,47 +151,7 @@ public class DmDeliveryBusinessLogic {
         }
     }
 
-//    private void sendWebSocketMessage(PrivateMessageDto messageDto){
-//
-//        String receiverName = messageDto.getTo().getUsername();
-//
-//        String receiverNodeId = (String) redisTemplate.opsForValue()
-//                .get("nodeId:" + receiverName);
-//        log.info("->>>>>>>>user is online on this node; {} ", receiverNodeId);
-//
-//
-//        try{
-//            if(receiverNodeId == null) {
-//                handleOfflineUser(messageDto);
-//                return;
-//            }
-//
-//            if(nodeIdentity.getNodeId().equals(receiverNodeId) ){
-//                WebSocketSession session = registerUserSession
-//                        .getUserSessionInLocalNodeMap(receiverName);
-//                log.info(" ->>>>>>>>>>>user is Online in Local node with" +
-//                        " session,{}", session);
-//
-//                if(session!= null && session.isOpen()){
-//
-//                        session.sendMessage(new TextMessage(
-//                                objectMapper.writeValueAsString(messageDto)));
-//                        log.info("---->>>>>>>>>message sent to {} ", receiverName);
-//                   return;
-//                }
-//
-//                sendReadReceipt(messageDto);
-//            }
-//
-//            interNodeDmDelivery(messageDto);
-//
-//        } catch (Exception e) {
-//            handleOfflineUser(messageDto);
-//            log.warn("Realtime delivery failed for {}. Falling back.", receiverName);
-//
-//        }
-//
-//    }
+
     private void handleOfflineUser(PrivateMessageDto messageDto){
 
         log.info("User offline: {}", messageDto.getTo().getUsername());

@@ -10,7 +10,9 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.jackson.Jacksonized;
+import org.springframework.jdbc.core.RowMapper;
 
+import java.sql.ResultSet;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -58,24 +60,64 @@ public class PrivateMessageDto   {
 
     }
 
+    public PrivateMessageDto (PrivateMessage message){
 
+        this.message_seq  = message.getMessageId().getMessageSeq();
+        this.channel = message.getMessageId().getPrivateChannelId();
+        this.messageType = message.getMessageType();
+        this.from = UserPublicProfile.builder()
+                .id(message.getFrom().getUserId().toString())
+                .username(message.getFrom().getUsername())
+                .build();
+        this.to = UserPublicProfile.builder()
+                .id(message.getTo().getUserId().toString())
+                .username(message.getTo().getUsername())
+                .build();
+        this.content = message.getContent();
+        this.sentAt =  message.getSentAt().toString();
 
-         public PrivateMessageDto (PrivateMessage message){
+    }
 
-            this.message_seq  = message.getMessageId().getMessageSeq();
-            this.channel = message.getMessageId().getPrivateChannelId();
-            this.messageType = message.getMessageType();
-            this.from = UserPublicProfile.builder()
-                    .id(message.getFrom().getUserId().toString())
-                    .username(message.getFrom().getUsername())
-                    .build();
-            this.to = UserPublicProfile.builder()
-                    .id(message.getTo().getUserId().toString())
-                    .username(message.getTo().getUsername())
-                    .build();
-            this.content = message.getContent();
-            this.sentAt =  message.getSentAt().toString();
+    public static RowMapper<PrivateMessageDto> privateMessageMapper = (rs, rowNum) -> {
+        PrivateMessageDto dto = new PrivateMessageDto();
 
+        // 1. Map primitive and direct field
+        dto.setChannel(UUID.fromString(rs.getString("private_channel_id")));
+        dto.setMessage_seq(rs.getLong("message_seq"));
+
+        // Handle nullable column for prevMessage_seq
+        long prevSeq = rs.getLong("prev_msg_seq");
+        dto.setPrevMessage_seq(rs.wasNull() ? null : prevSeq);
+
+        // Map Enum (Assumes stored as String like 'TEXT', 'IMAGE')
+        String typeStr = rs.getString("message_type");
+        dto.setMessageType(typeStr != null ? MessageType.valueOf(typeStr) : null);
+
+        dto.setContent(rs.getString("content"));
+        dto.setSentAt(rs.getString("sent_at"));
+
+        // 2. Map the nested 'from' profile using only the ID from the row
+        String fromIdStr = rs.getString("from_user_id");
+        if (fromIdStr != null) {
+            UserPublicProfile fromProfile = new UserPublicProfile();
+            fromProfile.setId(fromIdStr); // Or whatever type your User ID uses
+            dto.setFrom(fromProfile);
         }
+
+        // 3. Map the nested 'to' profile using only the ID from the row
+        String toIdStr = rs.getString("to_user_id");
+        if (toIdStr != null) {
+            UserPublicProfile toProfile = new UserPublicProfile();
+            toProfile.setId(toIdStr);
+            dto.setTo(toProfile);
+        }
+
+        return dto;
+    };
+
+
+
+
+
 
 }
