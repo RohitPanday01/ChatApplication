@@ -61,7 +61,7 @@ public class DmSubscriberPubSub implements ChannelSubscriberForRedisPubSub {
                         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
                     }
                 } catch (Exception e) {
-                    log.error("DM typing listener failed", e);
+                    log.error("DM Chat listener failed", e);
                 }
             };
 

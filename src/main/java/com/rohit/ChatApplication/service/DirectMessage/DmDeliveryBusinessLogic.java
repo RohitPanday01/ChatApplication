@@ -25,10 +25,12 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -49,6 +51,7 @@ public class DmDeliveryBusinessLogic {
     private final CaffeineCacheResolver caffeineCacheResolver;
     private final PrivateMessageJdbcRepository privateMessageJdbcRepository;
     private final UserRoutingService userRoutingService;
+    private final LocalSessionDelivery localSessionDelivery;
 
     public DmDeliveryBusinessLogic(@Qualifier("chatPubSubTemplate") RedisTemplate<String , Object> redisTemplate,
                               KafkaTemplate<String, Object> kafkaTemplate,
@@ -60,7 +63,7 @@ public class DmDeliveryBusinessLogic {
                                    SnowFlakeIdGenerator snowFlakeIdGenerator,
                                    CaffeineCacheResolver caffeineCacheResolver,
                                    PrivateMessageJdbcRepository privateMessageJdbcRepository,
-                                   UserRoutingService userRoutingService){
+                                   UserRoutingService userRoutingService, LocalSessionDelivery localSessionDelivery){
         this.redisTemplate = redisTemplate ;
         this.kafkaTemplate = kafkaTemplate;
         this.registerUserSession = registerUserSession;
@@ -74,14 +77,17 @@ public class DmDeliveryBusinessLogic {
         this.caffeineCacheResolver = caffeineCacheResolver;
         this.privateMessageJdbcRepository = privateMessageJdbcRepository;
         this.userRoutingService = userRoutingService;
+        this.localSessionDelivery = localSessionDelivery;
     }
 
 
 
     public void handle(List<PrivateMessageDto> messages)  {
 
+        String currentServerNodeId = nodeIdentity.getNodeId();
+        Map<String , List<PrivateMessageDto>> localDeliveries = new HashMap<>();
+        Map<String, List<PrivateMessageDto>> remoteNodeMap = new HashMap<>();
 
-       Map<String, String > targetNodeIdsForUser = new HashMap<>();
         for(PrivateMessageDto message : messages){
             Long messageSeq = snowFlakeIdGenerator.generateId();
             message.setMessage_seq(messageSeq);
@@ -90,36 +96,29 @@ public class DmDeliveryBusinessLogic {
                    caffeineCacheResolver.handlePrevMessageSeq(message.getChannel() ,messageSeq);
 
            message.setPrevMessage_seq(prevMessageSeq);
-           String nodeId = userRoutingService.getUserLocation(message.getTo().getUsername());
-
-           if(nodeId != null){
-               targetNodeIdsForUser.put(message.getTo().getUsername(), nodeId);
-           }
 
         }
 
         privateMessageJdbcRepository.consumeBatch(messages);
         log.debug("Successfully batch-inserted {} records to Database.", messages.size());
 
-        String currentServerNodeId = nodeIdentity.getNodeId();
-        List<PrivateMessageDto> localDeliveries = new ArrayList<>();
-        Map<String, List<PrivateMessageDto>> remoteNodeMap = new HashMap<>();
+
 
         for(PrivateMessageDto messageDto : messages){
            String receiverUsername =  messageDto.getTo().getUsername();
-           String nodeId = targetNodeIdsForUser.get(receiverUsername);
+           String nodeId = userRoutingService.getUserLocation(receiverUsername);
 
            if(nodeId == null ){
                handleOfflineUser(messageDto);
            }
 
            if(currentServerNodeId.equals(nodeId)){
-               localDeliveries.add(messageDto);
+               localDeliveries.computeIfAbsent(receiverUsername, k->new ArrayList<>()).add(messageDto);
            }else{
                remoteNodeMap.computeIfAbsent(nodeId, k -> new ArrayList<>()).add(messageDto);
            }
         }
-        deliverToLocalSession(localDeliveries);
+        localSessionDelivery.handleLocalDelivery(localDeliveries);
 
         pipelineRedisPubSub(remoteNodeMap);
 
@@ -149,36 +148,7 @@ public class DmDeliveryBusinessLogic {
 
     }
 
-    private void deliverToLocalSession(List<PrivateMessageDto> messages) {
 
-        for(PrivateMessageDto messageDto : messages){
-
-            String receiver = messageDto.getTo().getUsername();
-            WebSocketSession session =
-                    registerUserSession.getUserSessionInLocalNodeMap(receiver);
-
-            if (session == null || !session.isOpen()) {
-                handleOfflineUser(messageDto);
-                return;
-            }
-
-            try{
-
-                session.sendMessage(
-                        new TextMessage(objectMapper.writeValueAsString(messageDto)));
-
-                log.info("Message successfully delivered to local WebSocket session for user: {}", receiver);
-                sendReadReceipt(messageDto);
-
-            } catch (Exception e) {
-                log.error("WebSocket delivery failed", e);
-                handleOfflineUser(messageDto);
-
-            }
-
-        }
-
-    }
 
     private void pipelineRedisPubSub(Map<String, List<PrivateMessageDto>> remoteNodeMap) {
         if (remoteNodeMap.isEmpty()) return;

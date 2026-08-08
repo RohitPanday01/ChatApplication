@@ -244,11 +244,11 @@ public class RedisConfig {
 
     }
 
-    @Bean
+    @Bean(name ="userLocationL1Cache")
     public Cache<String, String> userLocationL1Cache() {
         return Caffeine.newBuilder()
                 .maximumSize(50_000)                   // Capped at ~10MB RAM footprint
-                .expireAfterWrite(Duration.ofSeconds(10)) // 10s TTL automatically handles node migration
+                .expireAfterWrite(Duration.ofMinutes(1)) // 10s TTL automatically handles node migration
                 .recordStats()                          // Enables cache hit/miss metrics tracking
                 .build();
     }

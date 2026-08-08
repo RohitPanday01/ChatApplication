@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class UserRoutingService {
     private static final Logger log = LoggerFactory.getLogger(UserRoutingService.class);
@@ -17,7 +20,7 @@ public class UserRoutingService {
     private final ObjectMapper objectMapper;
 
     public UserRoutingService(
-            Cache<String, String> userLocationL1Cache,
+            @Qualifier("userLocationL1Cache") Cache<String, String> userLocationL1Cache,
             @Qualifier("redisCrudTemplate")RedisTemplate<String, Object> redisTemplate, // Bound to your typing connection factory
             ObjectMapper objectMapper) {
         this.userLocationL1Cache = userLocationL1Cache;
