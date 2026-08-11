@@ -130,6 +130,30 @@ public class RedisConfig {
         return new LettuceConnectionFactory(config, clientConfig);
     }
 
+    @Bean(name = "ReceiptConnectionFactory")
+    public LettuceConnectionFactory ReceiptPubSubConnectionFactory(ClientResources sharedNettyResources) {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(redisHost, redisPort);
+
+        // 💡 UNPOOLED: Avoids pool synchronization traps completely for outbound chat PUBLISH execution
+        LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
+                .clientResources(sharedNettyResources)
+                .commandTimeout(Duration.ofMillis(2000)) // Lenient window exclusively for the initial SUBSCRIBE handshake
+                .shutdownTimeout(Duration.ZERO)
+                .clientOptions(ClientOptions.builder()
+                        .socketOptions(SocketOptions.builder()
+                                .connectTimeout(Duration.ofMillis(2000))
+                                .keepAlive(true) // Crucial to keep subscription line alive through host firewalls
+                                .build())
+                        .timeoutOptions(TimeoutOptions.enabled(Duration.ofMillis(2000)))
+                        // 💡 DEFAULT: Allows Lettuce to buffer outbound message frames briefly during micro-stutters
+                        // ensuring 1-to-1 chat payloads are safely flushed when the connection drops and returns.
+                        .disconnectedBehavior(ClientOptions.DisconnectedBehavior.DEFAULT)
+                        .build())
+                .build();
+
+        return new LettuceConnectionFactory(config, clientConfig);
+    }
+
     @Bean(name = "typingIndicatorConnectionFactory")
     public LettuceConnectionFactory typingIndicatorConnectionFactory(ClientResources sharedNettyResources) {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(redisHost, redisPort);
@@ -177,6 +201,25 @@ public class RedisConfig {
     @Bean(name = "chatPubSubTemplate")
     public RedisTemplate<String, Object> redisChatTemplate
             (@Qualifier("chatPubSubConnectionFactory")LettuceConnectionFactory connectionFactory,
+             ObjectMapper objectMapper){
+
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        // Use the new API instead of deprecated GenericJackson2JsonRedisSerializer
+        RedisSerializer<Object> jsonSerializer = RedisSerializer.json();
+
+        template.setKeySerializer(RedisSerializer.string());
+        template.setHashKeySerializer(RedisSerializer.string());
+        template.setValueSerializer(jsonSerializer);
+        template.setHashValueSerializer(jsonSerializer);
+
+        return template;
+    }
+
+    @Bean(name = "receiptTemplate")
+    public RedisTemplate<String, Object> redisReceiptTemplate
+            (@Qualifier("ReceiptConnectionFactory")LettuceConnectionFactory connectionFactory,
              ObjectMapper objectMapper){
 
         RedisTemplate<String, Object> template = new RedisTemplate<>();
