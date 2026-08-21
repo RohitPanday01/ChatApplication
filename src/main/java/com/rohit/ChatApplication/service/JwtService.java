@@ -7,6 +7,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -38,12 +39,13 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String jwtToken) {
-        return Jwts.parser().verifyWith(getSigningKey())
+        return Jwts.parser().verifyWith(this.getSigningKey())
                 .build()
                 .parseSignedClaims(jwtToken)
                 .getPayload();
     }
 
+    @PostConstruct
     private SecretKey getSigningKey() {
         byte [] bytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(bytes);

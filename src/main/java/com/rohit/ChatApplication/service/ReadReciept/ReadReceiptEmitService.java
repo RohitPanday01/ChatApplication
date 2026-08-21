@@ -24,7 +24,6 @@ public class ReadReceiptEmitService {
         );
 
          ReadReceipt event = new ReadReceipt(
-                eventId ,
                 message.getId().toString()
                 , message.getChannel().toString(),
                 message.getFrom().getUsername(),
@@ -43,7 +42,6 @@ public class ReadReceiptEmitService {
         );
 
         ReadReceipt event = new ReadReceipt(
-                eventId ,
                 messageDto.getId().toString()
                 , messageDto.getChannel().toString(),
                 messageDto.getFrom().getUsername(),
@@ -62,7 +60,7 @@ public class ReadReceiptEmitService {
         );
 
         ReadReceipt event = new ReadReceipt(
-                eventId ,
+
                 messageDto.getId().toString()
                 , messageDto.getChannel().toString(),
                 messageDto.getFrom().getUsername(),

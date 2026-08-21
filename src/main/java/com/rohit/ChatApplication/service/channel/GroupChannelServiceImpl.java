@@ -36,6 +36,7 @@ public class GroupChannelServiceImpl {
 
     public Optional<GroupChannel> getChannelById(UUID channelId)  {
 
+
 //        return groupRepo.findById(channelId).orElseThrow(
 //                        () -> new ChannelDoesNotExist(
 //                                "channel with id=%s does not exist !".formatted(channelId)));

@@ -25,9 +25,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
@@ -39,7 +41,7 @@ import java.util.concurrent.*;
 
 
 @Component
-public class PresenceWSHandler extends TextWebSocketHandler {
+public class PresenceWSHandler extends AbstractWebSocketHandler {
 
     private final Logger log = LoggerFactory.getLogger(PresenceWSHandler.class);
 
@@ -87,47 +89,18 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-//        UserDetail userDetail = (UserDetail) session.getAttributes().get("userDetail");
-//        if (userDetail == null) {
-//            log.error("->>>>>>>>>>>WebSocket handshake failed: user not authenticated");
-//            session.close(CloseStatus.NOT_ACCEPTABLE.withReason("Authentication required"));
-//            return;
-//        }
-//
-//        log.info("->>>>>>>>>>>>>User connected via WS: {}", userDetail.getUsername());
 
        String username = (String) session.getAttributes().get("username");
        String userId = (String) session.getAttributes().get("userid");
 
        WebSocketSession safeSession =
                new ConcurrentWebSocketSessionDecorator(session , 1000, 1024 *64);
-//        session.getAttributes().put("userid", userId);
-//       session.getAttributes().put("username", username);
 
        String thisServerNodeId = nodeIdentity.getNodeId();
-
-//       redisTemplate.opsForValue().set("nodeId:"+username , thisServerNodeId);
 
 
        try{
            registerUserSession.registerUserSessionInLocalNodeMap(username, safeSession, userId);
-
-//           if(registerUserSession.getUserSessionInLocalNodeMapSize() == 1){
-//               subscriptionManager.subscribeUserTypingChannel(thisServerNodeId);
-//           }
-
-           Set<String> groupChannelProfiles =  groupChannelService.findAllGroupsForUser(userId);
-           groupChannelsForUser.put(username, groupChannelProfiles);
-
-           for(String id : groupChannelProfiles ){
-
-               registerUserSession.registerUserSessionsInTheirGroups(id, safeSession);
-               if(registerUserSession.getUserSessionsInTheirGroups(id).size() == 1){
-                   subscriptionManager.subscribeGroup(id);
-               }
-           }
-
-//           redisTemplate.opsForZSet().add("online_users_lastPing",  username , System.currentTimeMillis());
 
 
            long now = System.currentTimeMillis();
@@ -185,6 +158,13 @@ public class PresenceWSHandler extends TextWebSocketHandler {
     }
 
     @Override
+    protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
+
+
+    }
+
+
+    @Override
     public void handleTransportError(@NonNull WebSocketSession session, Throwable exception) {
         log.error("error in handleTransport");
     }
@@ -213,11 +193,7 @@ public class PresenceWSHandler extends TextWebSocketHandler {
                 }
             }
 
-//            String nodeID = (String) redisTemplate.opsForValue().get("nodeId:"+ username);
-//
-//            if(nodeIdentity.getNodeId().equals(nodeID)){
-//                redisTemplate.delete("nodeId:"+ username);
-//            }
+
             Set<String> groupChannelProfiles = groupChannelsForUser
                     .getOrDefault(username , Collections.emptySet() );
 
@@ -253,12 +229,9 @@ public class PresenceWSHandler extends TextWebSocketHandler {
 
     private void handleTyping(JsonNode node , WebSocketSession session)
             throws JsonProcessingException {
-//        UserDetail userDetail = (UserDetail) session.getAttributes().get("userDetail");
-//
-//
-//        String username = userDetail.getUsername();
+
         String username = (String) session.getAttributes().get("username");
-//        String userId = userDetail.getId();
+
         String channelId =  node.path("channelId").asText();
         String to = node.path("to").asText(null);
         boolean typing =  node.path("isTyping").asBoolean();

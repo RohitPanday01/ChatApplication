@@ -3,13 +3,12 @@ package com.rohit.ChatApplication.config;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.rohit.ChatApplication.data.message.PrivateMessageDto;
+import com.rohit.ChatApplication.service.ChannelWatermarkState;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Configuration
 public class CaffeineCache {
@@ -24,11 +23,11 @@ public class CaffeineCache {
                 .build();
     }
 
-    @Bean(name = "userMessageBuffer")
-    public Cache<String , ConcurrentLinkedQueue<PrivateMessageDto>>  userMessageBuffer(){
+    @Bean(name = "userChannelLastDeliveredSeq")
+    public Cache<UUID , ChannelWatermarkState>  userMessageBuffer(){
         return Caffeine.newBuilder()
                 .maximumSize(50_000)
-                .expireAfterWrite(Duration.ofHours(1))
+                .expireAfterWrite(Duration.ofMinutes(15))
                 .recordStats()
                 .build();
     }

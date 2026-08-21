@@ -10,7 +10,6 @@ import java.time.Instant;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ReadReceipt(
-        String eventId,
         String messageId,
         String channelId,
         String sender,
@@ -26,9 +25,8 @@ public record ReadReceipt(
     }
 
     // Overloaded constructor for quick instantiation
-    public ReadReceipt(String eventId, String messageId, String channelId, String sender, ReceiptType type, String receiver) {
-        this(eventId, messageId, channelId, sender, type, receiver, Instant.now());
+    public ReadReceipt( String messageId, String channelId, String sender, ReceiptType type, String receiver) {
+        this( messageId, channelId, sender, type, receiver, Instant.now());
     }
-
 
 }

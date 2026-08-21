@@ -80,7 +80,7 @@ public class DirectMessageProducer {
                        String senderId = dto.getFrom().getUsername();
 
                        ReadReceipt readReceipt =
-                               new ReadReceipt(null , messageSeq , dto.getChannel().toString(), senderId,
+                               new ReadReceipt(  messageSeq , dto.getChannel().toString(), senderId,
                                        ReceiptType.SENT, dto.getTo().getUsername() );
 
                        WebSocketSession session = registerUserSession.getUserSessionInLocalNodeMap(dto.getFrom().getUsername());

@@ -217,22 +217,20 @@ public class RedisConfig {
         return template;
     }
 
+
     @Bean(name = "receiptTemplate")
-    public RedisTemplate<String, Object> redisReceiptTemplate
-            (@Qualifier("ReceiptConnectionFactory")LettuceConnectionFactory connectionFactory,
-             ObjectMapper objectMapper){
-
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
+    public RedisTemplate<String, byte[]> binaryReceiptRedisTemplate(
+            @Qualifier("ReceiptConnectionFactory")LettuceConnectionFactory connectionFactory) {
+        RedisTemplate<String, byte[]> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
-
-        // Use the new API instead of deprecated GenericJackson2JsonRedisSerializer
-        RedisSerializer<Object> jsonSerializer = RedisSerializer.json();
-
+        // Channel names / Keys remain readable Strings for debugging & routing
         template.setKeySerializer(RedisSerializer.string());
         template.setHashKeySerializer(RedisSerializer.string());
-        template.setValueSerializer(jsonSerializer);
-        template.setHashValueSerializer(jsonSerializer);
 
+        // Payloads remain pure raw bytes (no JDK class headers, no JSON strings)
+        template.setValueSerializer(RedisSerializer.byteArray());
+        template.setHashValueSerializer(RedisSerializer.byteArray());
+        template.afterPropertiesSet();
         return template;
     }
 
