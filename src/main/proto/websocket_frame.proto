@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package chat.protocol;
+
+import "read_receipt.proto";
+// In the future:
+// import "chat_message.proto";
+// import "typing_indicator.proto";
+
+option java_package = "com.chat.protocol";
+option java_outer_classname = "WebSocketFrameProto";
+option java_multiple_files = true;
+
+message WebSocketFrame {
+  // --- Frame Metadata (1-byte wire tags) ---
+  optional int64 client_timestamp = 1; // 1-byte tag (0x08)
+  // --- Reserved for Future Metadata (Fields 2 to 7) ---
+  // Guarantees 6 future 1-byte tag slots for global headers (e.g. auth_token, client_version)
+  // Future metadata extension slots (e.g., request_id = 2, trace_id = 3)
+  reserved 2 to 7;
+  // reserved "trace_id", "request_id";
+  // If trace_id was ever pushed to an active client, keep its name locked:
+  // reserved "trace_id";
+
+  // --- Polymorphic Payloads (Fields 8 to 15 = 1-byte wire tags) ---
+  oneof payload {
+    ReadReceipt read_receipt = 8; // Tag = (8 << 3) | 2 = 66 (0x42) -> 1 byte
+
+    // Future 1-byte payload extension slots:
+    // ChatMessage chat_message         = 9;
+    // TypingIndicator typing_indicator = 10;
+    // PresenceEvent presence_event     = 11;
+  }
+
+  // Lock low-frequency range
+  reserved 16 to 30;
+}

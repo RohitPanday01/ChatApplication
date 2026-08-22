@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package chat.protocol;
+
+option java_package = "com.chat.protocol";
+option java_outer_classname = "ReadReceiptProto";
+option java_multiple_files = true;
+
+enum ReceiptType {
+  RECEIPT_TYPE_UNSPECIFIED = 0; // Mandatory Proto3 zero-fallback
+  SENT = 1;                     // Server ack (1 tick)
+  DELIVERED = 2;                // Client B received message (2 gray ticks)
+  READ = 3;                     // Client B opened conversation (2 blue ticks)
+}
+
+message ReadReceipt {
+  // 128-bit UUIDs split into two 64-bit Little-Endian primitives
+  fixed64 channel_id_msb = 1; // wire_type 1 (8 bytes)
+  fixed64 channel_id_lsb = 2; // wire_type 1 (8 bytes)
+  fixed64 sender_id_msb  = 3; // wire_type 1 (8 bytes)
+  fixed64 sender_id_lsb  = 4; // wire_type 1 (8 bytes)
+
+  // Marked optional so sequence ID = 0 is preserved on the wire
+  optional int64 message_seq = 5; // wire_type 0 (Varint)
+
+  // Receipt lifecycle state
+  ReceiptType type = 6; // wire_type 0 (Varint)
+}
