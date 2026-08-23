@@ -40,6 +40,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.*;
 
 
@@ -98,15 +99,17 @@ public class PresenceWSHandler extends AbstractWebSocketHandler {
 
        String username = (String) session.getAttributes().get("username");
        String userId = (String) session.getAttributes().get("userid");
+        ByteBuffer sessionKey = (ByteBuffer)session.getAttributes().get("userUUIDByteBuffer");
 
-       WebSocketSession safeSession =
+
+        WebSocketSession safeSession =
                new ConcurrentWebSocketSessionDecorator(session , 1000, 1024 *64);
 
        String thisServerNodeId = nodeIdentity.getNodeId();
 
 
        try{
-           registerUserSession.registerUserSessionInLocalNodeMap(username, safeSession, userId);
+           registerUserSession.registerUserSessionInLocalNodeMap(username, safeSession, sessionKey);
 
 
            long now = System.currentTimeMillis();
@@ -123,9 +126,9 @@ public class PresenceWSHandler extends AbstractWebSocketHandler {
 
                return null;
            });
-           presencePublisher.publish(username , "online");
-
-           log.info("->>>>>>>>> published user is Online to redis Stream publisher: {}", username);
+//           presencePublisher.publish(username , "online");
+//
+//           log.info("->>>>>>>>> published user is Online to redis Stream publisher: {}", username);
 
        }catch (Exception e) {
 
@@ -134,6 +137,7 @@ public class PresenceWSHandler extends AbstractWebSocketHandler {
                // ROLLBACK STATE ON FAILURE to prevent zombie registrations
                try {
                    registerUserSession.unregisterUserSessionInLocalNodeMap(username, session);
+                   registerUserSession.unregisterUserSessionInLocalNodeMap(sessionKey ,session);
                    safeSession.close(CloseStatus.SERVER_ERROR.withReason("Connection hydration failed"));
                    redisTemplate.delete("nodeId:" + username);
                } catch (Exception rollbackEx) {
@@ -203,6 +207,7 @@ public class PresenceWSHandler extends AbstractWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, @NonNull CloseStatus status)  {
         String username = (String) session.getAttributes().get("username");
         String userId = (String)session.getAttributes().get("userid");
+        ByteBuffer sessionKey = (ByteBuffer)session.getAttributes().get("userUUIDByteBuffer");
         String sessionId = session.getId();
 
 
@@ -221,6 +226,14 @@ public class PresenceWSHandler extends AbstractWebSocketHandler {
                 if(registerUserSession.getUserSessionInLocalNodeMapSize() == 0){
                     subscriptionManager.unsubscribeUserTypingChannel(thisServerNodeId);
                 }
+            }
+
+            WebSocketSession storedSessionForUserId = registerUserSession.getUserSessionInLocalNodeMap(username);
+            if (storedSessionForUserId != null && storedSessionForUserId.getId().equals(sessionId)) {
+                registerUserSession.unregisterUserSessionInLocalNodeMap(sessionKey , storedSession );
+//                if(registerUserSession.getUserSessionInLocalNodeMapSize() == 0){
+//                    subscriptionManager.unsubscribeUserTypingChannel(thisServerNodeId);
+//                }
             }
 
 

@@ -8,7 +8,10 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.BinaryMessage;
+import org.springframework.web.socket.WebSocketSession;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -37,11 +40,21 @@ public class HandleReadReceipt {
     }
 
     public void routeReceipt(long mostSignificantBit , long leastSignificantBit,
-                             ByteBuffer buffer){
+                             ByteBuffer buffer) throws IOException {
 
 
         ByteBuffer userIdBuffer = ByteBuffer.allocate(16)
                 .putLong(mostSignificantBit).putLong(leastSignificantBit);
+
+        // check if user is present in local node or not
+        WebSocketSession session =
+                registerUserSession.getUserSessionInLocalNode(userIdBuffer);
+        //send to local websocket session
+        if(session != null && session.isOpen()){
+            session.sendMessage(new BinaryMessage(buffer.array()));
+
+        }
+
         byte[] userIdByteKey = userIdBuffer.array();
 
         RedisStringCommands stringCommandForPubSub =
@@ -74,7 +87,21 @@ public class HandleReadReceipt {
             buffer.get(cleanBytes);
             buffer.position(originalPos);
 
+            // B. OPTIMIZED ZERO-COPY FALLBACK: Handle off-heap DirectByteBuffers natively!
+            // Dispatch a direct command descriptor down Lettuce's pipeline.
+            // This transfers the data straight from off-heap C memory to Netty's sockets,
+            // completely avoiding any java array allocation inside the virtual thread.
+//            nativeLettuceConnection.dispatch(new io.lettuce.core.protocol.Command<>(
+//                    io.lettuce.core.protocol.CommandType.PUBLISH,
+//                    new io.lettuce.core.output.IntegerOutput<>(ByteArrayCodec.INSTANCE),
+//                    new io.lettuce.core.protocol.CommandArgs<>(ByteArrayCodec.INSTANCE)
+//                            .add(readReceiptChannel)
+//                            .add(buffer.duplicate()) // Duplicating safe-guards positional bounds safely
+//            ));
+
             pubSubConnectionFactory.getConnection().publish(readReceiptChannel, cleanBytes );
+
+            //now left kafka publish and consume and redis subscription
 
         } catch (Exception e) {
             throw new RuntimeException(e);

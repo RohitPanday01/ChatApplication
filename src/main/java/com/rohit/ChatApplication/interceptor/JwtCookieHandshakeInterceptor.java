@@ -18,7 +18,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
+
+import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class JwtCookieHandshakeInterceptor implements HandshakeInterceptor {
@@ -47,6 +50,18 @@ public class JwtCookieHandshakeInterceptor implements HandshakeInterceptor {
             if (jwtToken != null && jwtService.validateTokenSignatureOnly(jwtToken)) {
                 String username =  jwtService.extractUserName(jwtToken);
                 String userId  = jwtService.extractUserId(jwtToken);
+                UUID userUUID = UUID.fromString(userId);
+                long lsb = userUUID.getLeastSignificantBits();
+                long msb = userUUID.getMostSignificantBits();
+
+                ByteBuffer sessionKey = ByteBuffer.allocate(16)
+                        .putLong(msb)   // Writes Most Significant Bits (first 8 bytes)
+                        .putLong(lsb);
+
+                // 2. CRUCIAL: Flip or rewind the buffer!
+                // Because putLong() moved the position pointer to 16, we must reset it to 0
+                // so that localSessions.put() and .get() can read the bytes from the beginning.
+                sessionKey.rewind();
 
 //                UserDetail userDetails = usersDetailsService.loadUserByUsername(username);
 
@@ -54,6 +69,7 @@ public class JwtCookieHandshakeInterceptor implements HandshakeInterceptor {
 //                   new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 attributes.put("username", username);
                 attributes.put("userid", userId);
+                attributes.put("userUUIDByteBuffer", sessionKey);
 //                attributes.put("userDetail", userDetails);
 
                 response.setStatusCode(HttpStatus.ACCEPTED);
