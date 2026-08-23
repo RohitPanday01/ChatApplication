@@ -5,9 +5,14 @@ import com.github.benmanes.caffeine.cache.Cache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisStringCommands;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,14 +23,22 @@ public class UserRoutingService {
     private final Cache<String, String> userLocationL1Cache;
     private final RedisTemplate<String, Object> redisCrudTemplate;
     private final ObjectMapper objectMapper;
+    private final LettuceConnectionFactory crudConnectionFactory;
+    private final Cache<ByteBuffer, byte[]> userLocationByteCache;
 
     public UserRoutingService(
             @Qualifier("userLocationL1Cache") Cache<String, String> userLocationL1Cache,
             @Qualifier("redisCrudTemplate")RedisTemplate<String, Object> redisTemplate, // Bound to your typing connection factory
+            @Qualifier("redisCrudConnectionFactory")
+            LettuceConnectionFactory crudConnectionFactory,
+            @Qualifier("userLocationByteCache")
+            Cache<ByteBuffer, byte[]> userLocationByteCache,
             ObjectMapper objectMapper) {
         this.userLocationL1Cache = userLocationL1Cache;
         this.redisCrudTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.crudConnectionFactory = crudConnectionFactory;
+        this.userLocationByteCache = userLocationByteCache;
     }
 
     /**
@@ -51,6 +64,21 @@ public class UserRoutingService {
         }
 
         return nodeId;
+    }
+
+    public byte[] getUserLocation(ByteBuffer userIdBuffer){
+
+        try(RedisConnection connection =
+                    crudConnectionFactory.getConnection()){
+
+            RedisStringCommands stringCommands = connection.stringCommands();
+            return userLocationByteCache.get(userIdBuffer,
+                    (id) ->{
+                byte[] userIdByteKey = id.array();
+                return stringCommands.get(userIdByteKey);
+            });
+        }
+
     }
 
 

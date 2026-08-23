@@ -7,6 +7,7 @@ import com.rohit.ChatApplication.service.ChannelWatermarkState;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -29,6 +30,15 @@ public class CaffeineCache {
                 .maximumSize(50_000)
                 .expireAfterWrite(Duration.ofMinutes(15))
                 .recordStats()
+                .build();
+    }
+
+    @Bean(name ="userLocationByteCache")
+    public Cache<ByteBuffer, byte[]> userLocationByteCache() {
+        return Caffeine.newBuilder()
+                .maximumSize(50_000)                   // Capped at ~10MB RAM footprint
+                .expireAfterWrite(Duration.ofSeconds(60)) // 10s TTL automatically handles node migration
+                .recordStats()                          // Enables cache hit/miss metrics tracking
                 .build();
     }
 

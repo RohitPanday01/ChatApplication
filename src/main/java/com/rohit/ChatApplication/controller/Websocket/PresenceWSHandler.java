@@ -1,5 +1,6 @@
 package com.rohit.ChatApplication.controller.Websocket;
 
+import aj.org.objectweb.asm.Handle;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.rohit.ChatApplication.data.message.NodeIdentity;
 
+import com.rohit.ChatApplication.service.ReadReciept.HandleReadReceipt;
 import com.rohit.ChatApplication.service.RegisterUserSession;
 import com.rohit.ChatApplication.service.SessionSubscriptionManager;
 import com.rohit.ChatApplication.service.Typing.TypingEventPublisher;
@@ -32,7 +34,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-
+import com.chat.protocol.WebSocketFrame;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
@@ -63,16 +66,18 @@ public class PresenceWSHandler extends AbstractWebSocketHandler {
 
     private  final SessionSubscriptionManager subscriptionManager;
     private final NodeIdentity nodeIdentity;
+    private final HandleReadReceipt handleReadReceipt;
 
 
 
     public PresenceWSHandler(@Qualifier("redisStringTemplate") RedisTemplate<String, String> redisTemplate ,
-                             PresencePublisher presencePublisher,  ObjectMapper mapper,
+                             PresencePublisher presencePublisher, ObjectMapper mapper,
                              TypingEventPublisher typingEventPublisher ,
                              GroupChannelServiceImpl groupChannelService,
                              RegisterUserSession registerUserSession,
                              SessionSubscriptionManager subscriptionManager,
-                             NodeIdentity nodeIdentity){
+                             NodeIdentity nodeIdentity,
+                             HandleReadReceipt handleReadReceipt){
         this.redisTemplate = redisTemplate;
         this.presencePublisher = presencePublisher;
         this.mapper = mapper;
@@ -81,6 +86,7 @@ public class PresenceWSHandler extends AbstractWebSocketHandler {
         this.registerUserSession = registerUserSession;
         this.subscriptionManager = subscriptionManager;
         this.nodeIdentity = nodeIdentity;
+        this.handleReadReceipt = handleReadReceipt;
 
     }
 
@@ -159,6 +165,30 @@ public class PresenceWSHandler extends AbstractWebSocketHandler {
 
     @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
+        ByteBuffer buffer = message.getPayload();
+        WebSocketFrame frame = WebSocketFrame.parseFrom(buffer);
+
+        try{
+
+            switch (frame.getPayloadCase()){
+                case READ_RECEIPT -> {
+                   long senderIdLsb = frame.getReadReceipt().getSenderIdLsb();
+                   long senderIdMsb = frame.getReadReceipt().getSenderIdMsb();
+
+
+                   buffer.rewind();
+                   handleReadReceipt.routeReceipt(senderIdMsb, senderIdLsb,buffer);
+
+                }
+                case PAYLOAD_NOT_SET -> {
+                    throw new IllegalArgumentException("No payload found in Websocket frame in BinaryWsHandler");
+                }
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
 
 
     }
