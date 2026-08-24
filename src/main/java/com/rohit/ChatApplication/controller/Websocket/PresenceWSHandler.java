@@ -178,10 +178,13 @@ public class PresenceWSHandler extends AbstractWebSocketHandler {
                 case READ_RECEIPT -> {
                    long senderIdLsb = frame.getReadReceipt().getSenderIdLsb();
                    long senderIdMsb = frame.getReadReceipt().getSenderIdMsb();
+                   long channelIdMsb = frame.getReadReceipt().getChannelIdMsb();
+                   long channelIdLsb = frame.getReadReceipt().getChannelIdLsb();
 
 
                    buffer.rewind();
-                   handleReadReceipt.routeReceipt(senderIdMsb, senderIdLsb,buffer);
+                   handleReadReceipt
+                           .routeReceipt(senderIdMsb, senderIdLsb,buffer ,channelIdMsb, channelIdLsb);
 
                 }
                 case PAYLOAD_NOT_SET -> {

@@ -2,8 +2,12 @@ package com.rohit.ChatApplication.service.ReadReciept;
 
 import com.rohit.ChatApplication.service.RegisterUserSession;
 import com.rohit.ChatApplication.service.UserRoutingService;
+import io.lettuce.core.RedisCommandTimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -20,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class HandleReadReceipt {
+
+    private final Logger log = LoggerFactory.getLogger(HandleReadReceipt.class);
 
     private final RegisterUserSession registerUserSession;
     private final LettuceConnectionFactory pubSubConnectionFactory;
@@ -40,7 +46,7 @@ public class HandleReadReceipt {
     }
 
     public void routeReceipt(long mostSignificantBit , long leastSignificantBit,
-                             ByteBuffer buffer) throws IOException {
+                             ByteBuffer buffer, long channelIdMsb, long channelIdLsb) throws IOException {
 
 
         ByteBuffer userIdBuffer = ByteBuffer.allocate(16)
@@ -102,10 +108,30 @@ public class HandleReadReceipt {
             pubSubConnectionFactory.getConnection().publish(readReceiptChannel, cleanBytes );
 
             //now left kafka publish and consume and redis subscription
+            // and buffer before saving to db in kafka consumer
 
-        } catch (Exception e) {
+            transferMessageToKafka(channelIdMsb, channelIdLsb, cleanBytes);
+
+
+        } catch (RedisConnectionFailureException | RedisCommandTimeoutException e){
+
+            log.error("Failed to send ReadReceipt in BinaryReadReceipt handle" +
+                    "due to redisConnection or RedisCommandTimeout Exception");
+
+        }catch (Exception e) {
             throw new RuntimeException(e);
         }
+
+    }
+
+    public void transferMessageToKafka(long channelIdMsb, long channelIdLsb, byte[] buffer){
+
+        ByteBuffer channelIdBuffer = ByteBuffer.allocate(16)
+                .putLong(channelIdLsb).putLong(channelIdLsb);
+
+        byte[] channelId = channelIdBuffer.array();
+
+
 
     }
 }

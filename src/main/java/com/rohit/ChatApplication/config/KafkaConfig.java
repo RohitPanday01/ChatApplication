@@ -22,6 +22,7 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
+import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
@@ -65,6 +66,27 @@ public class KafkaConfig {
         return props;
     }
 
+    @Bean(name = "producerFactoryForBytes")
+    public ProducerFactory<byte[], byte[]> producerFactoryForBytes(){
+
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        props.put(ProducerConfig.BATCH_SIZE_CONFIG, 65536);
+        props.put(ProducerConfig.LINGER_MS_CONFIG, 10);
+        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 67108864);
+        props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "lz4");
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
+        props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
+        props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG ,120000);
+        props.put(ProducerConfig.MAX_BLOCK_MS_CONFIG , 50);
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+
     @Bean
     public ProducerFactory<String, Object> transactionalProducerFactory(){
         DefaultKafkaProducerFactory<String, Object> factory =
@@ -81,6 +103,11 @@ public class KafkaConfig {
     @Bean
     public  ProducerFactory<String, Object> producerFactory(){
         return new DefaultKafkaProducerFactory<>(producerConfigs());
+    }
+
+    @Bean(name = "kafkaBinaryTemplate" )
+    public KafkaTemplate<byte[], byte[]> kafkaBinaryTemplate() {
+        return new KafkaTemplate<>(producerFactoryForBytes());
     }
 
 
@@ -185,6 +212,37 @@ public class KafkaConfig {
 
         factory.getContainerProperties().setListenerTaskExecutor(executor);
         return factory;
+    }
+
+    @Bean(name = "kafkaBinaryListenerContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<byte[], byte[]>
+    kafkaBinaryListenerContainerFactory(String functionalGroupId){
+        String hostIp = generateUniqueInstanceId();
+        Map<String, Object > props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 300000);
+        props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 45000);
+        props.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 15000);
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 10);
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG , "earliest");
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "private-message-cg" );
+        // GROUP_INSTANCE_ID_CONFIG use it as a static instance ID
+        // to prevent rebalance when restarting the monolith container
+         props.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, functionalGroupId + "-" + hostIp);
+        DefaultKafkaConsumerFactory<byte[], byte[]> cf = new DefaultKafkaConsumerFactory<>(props);
+        ConcurrentKafkaListenerContainerFactory<byte[], byte[]> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(cf);
+        factory.setConcurrency(2);
+        factory.setBatchListener(true);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
+        // Disable virtual threads by using the default platform thread executor
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("kafka-container-dmDelivery");
+        executor.setVirtualThreads(false); // This ensures platform threads are used
+
+        factory.getContainerProperties().setListenerTaskExecutor(executor);
+        return factory;
+
     }
 
 
