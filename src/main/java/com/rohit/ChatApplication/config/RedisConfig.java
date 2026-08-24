@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.rohit.ChatApplication.data.message.NodeIdentity;
+import com.rohit.ChatApplication.service.ReadReciept.RedisReadReceiptSubscriber;
 import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -26,12 +28,15 @@ import org.springframework.data.redis.connection.lettuce.LettuceClientConfigurat
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.Topic;
 import org.springframework.data.redis.serializer.*;
 import org.springframework.retry.annotation.CircuitBreaker;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.concurrent.Executors;
 
 @Configuration
 public class RedisConfig {
@@ -41,6 +46,13 @@ public class RedisConfig {
 
     @Value("${spring.redis.port}")
     private  int redisPort;
+
+     private final NodeIdentity nodeIdentity;
+
+    public RedisConfig(NodeIdentity nodeIdentity){
+        this.nodeIdentity = nodeIdentity;
+
+    }
 
 
     @Bean
@@ -283,6 +295,24 @@ public class RedisConfig {
          container.setTaskExecutor(new VirtualThreadTaskExecutor("redis-Dm-pubSub"));
          return container;
 
+    }
+
+    @Bean(name = "ReceiptListenerContainer")
+    public RedisMessageListenerContainer redisMessageListenerContainer(
+            @Qualifier("ReceiptConnectionFactory") RedisConnectionFactory connectionFactory,
+            RedisReadReceiptSubscriber subscriber) {
+        String nodeId = nodeIdentity.getNodeId();
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+
+        // Use virtual threads for task execution inside Spring Data Redis container
+        container.setTaskExecutor(Executors.newVirtualThreadPerTaskExecutor());
+
+        // Dynamic subscription: "ReadReceipt:node-1", "ReadReceipt:node-2", etc.
+        String nodeChannel = "ReadReceipt:" + nodeId;
+        container.addMessageListener(subscriber, new ChannelTopic(nodeChannel));
+
+        return container;
     }
 
     @Bean(name ="userLocationL1Cache")

@@ -7,10 +7,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.kafka.KafkaException;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -20,6 +24,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 
 @Component
@@ -30,19 +36,29 @@ public class HandleReadReceipt {
     private final RegisterUserSession registerUserSession;
     private final LettuceConnectionFactory pubSubConnectionFactory;
     private final LettuceConnectionFactory crudConnectionFactory;
+
+    private final KafkaTemplate<byte[], byte[]> kafkaBinaryTemplate;
+    private final String deliveryTopic;
+
     private final UserRoutingService userRoutingService;
     private static final ConcurrentHashMap<ByteBuffer, byte[]> CHANNEL_CACHE = new ConcurrentHashMap<>();
+    private final Executor virtualThreadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     public HandleReadReceipt(RegisterUserSession registerUserSession,
                              @Qualifier("ReceiptConnectionFactory")
                              LettuceConnectionFactory pubSubConnectionFactory,
                              @Qualifier("redisCrudConnectionFactory")
                                  LettuceConnectionFactory crudConnectionFactory,
-                             UserRoutingService userRoutingService){
+                             UserRoutingService userRoutingService,
+                             @Qualifier("kafkaBinaryTemplate")
+                             KafkaTemplate<byte[], byte[]> kafkaBinaryTemplate,
+                             @Value("${chat.topics.read-receipt}") String deliveryTopic ){
         this.registerUserSession = registerUserSession;
         this.pubSubConnectionFactory = pubSubConnectionFactory;
         this.crudConnectionFactory = crudConnectionFactory;
         this.userRoutingService = userRoutingService;
+        this.kafkaBinaryTemplate = kafkaBinaryTemplate;
+        this.deliveryTopic = deliveryTopic;
     }
 
     public void routeReceipt(long mostSignificantBit , long leastSignificantBit,
@@ -57,16 +73,31 @@ public class HandleReadReceipt {
                 registerUserSession.getUserSessionInLocalNode(userIdBuffer);
         //send to local websocket session
         if(session != null && session.isOpen()){
-            session.sendMessage(new BinaryMessage(buffer.array()));
+            try {
+                // Pass buffer directly: works with both Direct and Heap buffers
+                session.sendMessage(new BinaryMessage(buffer));
+                return; // Delivered locally -> SKIP Redis Pub/Sub completely
+            } catch (IOException e) {
+                log.error("Failed to write binary receipt to local session", e);
+            }
 
         }
 
         byte[] userIdByteKey = userIdBuffer.array();
+        byte[] nodeVal;
+        try(RedisConnection crudConnection = crudConnectionFactory.getConnection()){
+            nodeVal = crudConnection.stringCommands().get(userIdByteKey);
+        }catch (Exception e) {
+            log.error("Failed to fetch user node mapping from Redis", e);
+            return;
+        }
 
-        RedisStringCommands stringCommandForPubSub =
-                crudConnectionFactory.getConnection().stringCommands();
 
-        byte[] nodeVal = stringCommandForPubSub.get(userIdByteKey);
+        // Offline check: Avoid NullPointerException if user has no active session
+        if (nodeVal == null || nodeVal.length == 0) {
+            log.debug("Target user is offline. Receipt buffered in Kafka only.");
+            return;
+        }
         ByteBuffer cacheKey = ByteBuffer.wrap(nodeVal);
 
         //  Fetch the cached combined byte channel.
@@ -127,11 +158,16 @@ public class HandleReadReceipt {
     public void transferMessageToKafka(long channelIdMsb, long channelIdLsb, byte[] buffer){
 
         ByteBuffer channelIdBuffer = ByteBuffer.allocate(16)
-                .putLong(channelIdLsb).putLong(channelIdLsb);
+                .putLong(channelIdMsb).putLong(channelIdLsb);
 
         byte[] channelId = channelIdBuffer.array();
 
-
+        kafkaBinaryTemplate.send( deliveryTopic ,channelId, buffer)
+                .whenCompleteAsync((result , throwable)-> {
+                     if(throwable != null){
+                         log.error("failed to send BinaryReadReceipt to kafkaBroker");
+                     }
+                }, virtualThreadExecutor);
 
     }
 }
